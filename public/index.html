@@ -31,35 +31,7 @@
     .subtitle {
       font-size: 0.85rem;
       color: #888;
-      margin-bottom: 16px;
-    }
-
-    /* Difficulty selector */
-    .difficulty-bar {
-      display: flex;
-      gap: 8px;
       margin-bottom: 20px;
-    }
-
-    .diff-btn {
-      padding: 8px 24px;
-      border-radius: 20px;
-      border: 2px solid #e94560;
-      background: transparent;
-      color: #e94560;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-    }
-
-    .diff-btn.active {
-      background: #e94560;
-      color: #fff;
-    }
-
-    .diff-btn:hover:not(.active) {
-      background: rgba(233,69,96,0.15);
     }
 
     .game-area {
@@ -153,6 +125,8 @@
 
     #board {
       display: grid;
+      grid-template-columns: repeat(4, 100px);
+      grid-template-rows: repeat(4, 100px);
       gap: 3px;
       background: #0f3460;
       border-radius: 12px;
@@ -161,7 +135,10 @@
     }
 
     .tile {
+      width: 100px;
+      height: 100px;
       border-radius: 6px;
+      background-size: 400px 400px;
       cursor: pointer;
       transition: transform 0.12s ease;
       position: relative;
@@ -177,6 +154,10 @@
       background: #0a1628 !important;
       cursor: default;
       box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+    }
+
+    .tile.moving {
+      transition: transform 0.15s ease;
     }
 
     /* Win overlay */
@@ -221,11 +202,6 @@
   <h1>City Puzzle</h1>
   <p class="subtitle" id="date-label">Loading today's city...</p>
 
-  <div class="difficulty-bar">
-    <button class="diff-btn" id="btn-easy" onclick="setDifficulty('easy')">Easy</button>
-    <button class="diff-btn active" id="btn-hard" onclick="setDifficulty('hard')">Hard</button>
-  </div>
-
   <div class="game-area">
     <div class="sidebar">
       <div class="stats">
@@ -261,16 +237,9 @@
   <p class="loading-msg" id="loading-msg">Loading image...</p>
 
   <script>
-    // ── Config per difficulty ────────────────────────────────────────────────
-    const DIFFICULTY_CONFIG = {
-      easy: { grid: 3, tileSize: 130 },
-      hard: { grid: 4, tileSize: 100 }
-    };
-
-    let difficulty = 'hard';
-    let GRID = 4;
-    let TILE_SIZE = 100;
-    let TOTAL = 16;
+    const GRID = 3;
+    const TILE_SIZE = 100;
+    const TOTAL = GRID * GRID;
 
     // ── Date-based image URL ──────────────────────────────────────────────
     function todayStr() {
@@ -282,35 +251,21 @@
     }
 
     const DATE_SEED = todayStr();
-    const IMAGE_URL = `https://picsum.photos/seed/${DATE_SEED}/800/800`;
+    // City/skyline-tagged Flickr photos; same lock id = same image until their cache rotates.
+    const IMAGE_URL = `https://loremflickr.com/800/800/city,skyline,urban?lock=${parseInt(DATE_SEED, 10)}`;
 
     document.getElementById('date-label').textContent =
       `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`;
     document.getElementById('preview').src = IMAGE_URL;
 
     // ── Puzzle state ──────────────────────────────────────────────────────
-    let tiles = [];
+    let tiles = [];      // array of tile values 0-15, 0 = empty
     let emptyIdx = 0;
     let moves = 0;
     let startTime = null;
     let timerInterval = null;
     let solved = false;
     let imageLoaded = false;
-
-    // ── Difficulty selector ───────────────────────────────────────────────
-    function setDifficulty(d) {
-      if (d === difficulty) return;
-      difficulty = d;
-      const cfg = DIFFICULTY_CONFIG[difficulty];
-      GRID = cfg.grid;
-      TILE_SIZE = cfg.tileSize;
-      TOTAL = GRID * GRID;
-
-      document.getElementById('btn-easy').classList.toggle('active', d === 'easy');
-      document.getElementById('btn-hard').classList.toggle('active', d === 'hard');
-
-      newGame();
-    }
 
     // ── Solvability ───────────────────────────────────────────────────────
     function countInversions(arr) {
@@ -323,17 +278,12 @@
 
     function isSolvable(arr) {
       const inv = countInversions(arr);
-      if (GRID % 2 === 1) {
-        // Odd grid (e.g. 3x3): solvable iff inversions count is even
-        return inv % 2 === 0;
-      } else {
-        // Even grid (e.g. 4x4): solvable iff
-        // (inversions even AND empty on odd row from bottom) OR
-        // (inversions odd AND empty on even row from bottom)
-        const emptyRow = Math.floor(arr.indexOf(0) / GRID);
-        const emptyRowFromBottom = GRID - emptyRow;
-        return (inv % 2 === 0) === (emptyRowFromBottom % 2 === 1);
-      }
+      const emptyRow = Math.floor(arr.indexOf(0) / GRID); // from top (0-indexed)
+      const emptyRowFromBottom = GRID - emptyRow;
+      // For 4x4: solvable iff
+      //   (grid width even) AND (inversions even AND empty on odd row from bottom)
+      //     OR (inversions odd AND empty on even row from bottom)
+      return (inv % 2 === 0) === (emptyRowFromBottom % 2 === 1);
     }
 
     function shuffle(arr) {
@@ -344,7 +294,7 @@
     }
 
     function generateSolvable() {
-      const arr = Array.from({ length: TOTAL }, (_, i) => i);
+      const arr = Array.from({ length: TOTAL }, (_, i) => i); // 0..15
       do { shuffle(arr); } while (!isSolvable(arr) || isSolved(arr));
       return arr;
     }
@@ -354,31 +304,26 @@
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────
-    function applyBoardLayout() {
-      const board = document.getElementById('board');
-      board.style.gridTemplateColumns = `repeat(${GRID}, ${TILE_SIZE}px)`;
-      board.style.gridTemplateRows = `repeat(${GRID}, ${TILE_SIZE}px)`;
-    }
-
     function render() {
       const board = document.getElementById('board');
-      applyBoardLayout();
       board.innerHTML = '';
 
       tiles.forEach((val, idx) => {
         const tile = document.createElement('div');
         tile.className = 'tile' + (val === 0 ? ' empty' : '');
         tile.dataset.idx = idx;
-        tile.style.width = `${TILE_SIZE}px`;
-        tile.style.height = `${TILE_SIZE}px`;
 
         if (val !== 0 && imageLoaded) {
-          const col = val % GRID;
-          const row = Math.floor(val / GRID);
+          // val 1-15 → position in solved state = val (0-based col/row within the 4x4)
+          const srcPos = val; // solved position
+          const col = srcPos % GRID;
+          const row = Math.floor(srcPos / GRID);
+          // background-size covers full 400x400 (4×100), position offsets
           tile.style.backgroundImage = `url('${IMAGE_URL}')`;
           tile.style.backgroundSize = `${GRID * TILE_SIZE}px ${GRID * TILE_SIZE}px`;
           tile.style.backgroundPosition = `-${col * TILE_SIZE}px -${row * TILE_SIZE}px`;
         } else if (val !== 0) {
+          // Placeholder color while image loads
           tile.style.background = `hsl(${val * 23}, 50%, 30%)`;
         }
 
@@ -404,6 +349,7 @@
       const movable = getMovable();
       if (!movable.includes(idx)) return;
 
+      // Swap
       [tiles[emptyIdx], tiles[idx]] = [tiles[idx], tiles[emptyIdx]];
       emptyIdx = idx;
       moves++;
@@ -454,11 +400,6 @@
     // ── New game ──────────────────────────────────────────────────────────
     function newGame() {
       stopTimer();
-      const cfg = DIFFICULTY_CONFIG[difficulty];
-      GRID = cfg.grid;
-      TILE_SIZE = cfg.tileSize;
-      TOTAL = GRID * GRID;
-
       tiles = generateSolvable();
       emptyIdx = tiles.indexOf(0);
       moves = 0;
