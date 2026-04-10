@@ -251,8 +251,7 @@
     }
 
     const DATE_SEED = todayStr();
-    // City/skyline-tagged Flickr photos; same lock id = same image until their cache rotates.
-    const IMAGE_URL = `https://loremflickr.com/800/800/city,skyline,urban?lock=${parseInt(DATE_SEED, 10)}`;
+    const IMAGE_URL = `https://loremflickr.com/800/800/city,skyline?lock=${DATE_SEED}`;
 
     document.getElementById('date-label').textContent =
       `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`;
