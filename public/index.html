@@ -272,21 +272,10 @@
     let TILE_SIZE = 130;
     let TOTAL = 9;
 
-    // ── Date-based image URL ──────────────────────────────────────────────
-    function todayStr() {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}${m}${day}`;
-    }
-
-    const DATE_SEED = todayStr();
-    const IMAGE_URL = `https://loremflickr.com/800/800/city,skyline?lock=${DATE_SEED}`;
+    let IMAGE_URL = '';
 
     document.getElementById('date-label').textContent =
       `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`;
-    document.getElementById('preview').src = IMAGE_URL;
 
     // ── Puzzle state ──────────────────────────────────────────────────────
     let tiles = [];
@@ -471,23 +460,35 @@
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────
-    const img = new Image();
-    img.onload = () => {
-      imageLoaded = true;
-      document.getElementById('loading-msg').textContent = '';
-      render();
-    };
-    img.onerror = () => {
-      document.getElementById('loading-msg').textContent =
-        'Image failed to load — tiles shown as colors.';
-      imageLoaded = false;
-      render();
-    };
-    img.src = IMAGE_URL;
+    function loadImage(url) {
+      IMAGE_URL = url;
+      document.getElementById('preview').src = IMAGE_URL;
+      const img = new Image();
+      img.onload = () => {
+        imageLoaded = true;
+        document.getElementById('loading-msg').textContent = '';
+        render();
+      };
+      img.onerror = () => {
+        document.getElementById('loading-msg').textContent =
+          'Image failed to load — tiles shown as colors.';
+        imageLoaded = false;
+        render();
+      };
+      img.src = IMAGE_URL;
+    }
 
     document.getElementById('new-game-btn').addEventListener('click', newGame);
 
     newGame();
+
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(cfg => loadImage(cfg.imageUrl))
+      .catch(() => {
+        document.getElementById('loading-msg').textContent =
+          'Could not load config — tiles shown as colors.';
+      });
   </script>
 </body>
 </html>
