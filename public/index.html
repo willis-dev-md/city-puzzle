@@ -125,8 +125,7 @@
 
     #board {
       display: grid;
-      grid-template-columns: repeat(4, 100px);
-      grid-template-rows: repeat(4, 100px);
+      /* grid-template-* set dynamically by JS based on mode */
       gap: 3px;
       background: #0f3460;
       border-radius: 12px;
@@ -138,7 +137,7 @@
       width: 100px;
       height: 100px;
       border-radius: 6px;
-      background-size: 400px 400px;
+      /* background-size set dynamically by JS */
       cursor: pointer;
       transition: transform 0.12s ease;
       position: relative;
@@ -303,6 +302,10 @@
 <body>
   <h1>City Puzzle</h1>
   <p class="subtitle" id="date-label">Loading today's city...</p>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <a href="?mode=easy" id="btn-easy" style="padding:6px 16px;border-radius:8px;font-weight:600;font-size:0.85rem;text-decoration:none;border:2px solid #e94560;color:#e94560;background:transparent">Easy (3×3)</a>
+    <a href="?mode=hard" id="btn-hard" style="padding:6px 16px;border-radius:8px;font-weight:600;font-size:0.85rem;text-decoration:none;border:2px solid #e94560;color:#e94560;background:transparent">Hard (4×4)</a>
+  </div>
 
   <div class="game-area">
     <div class="sidebar">
@@ -359,14 +362,25 @@
   <p class="loading-msg" id="loading-msg">Loading image...</p>
 
   <script>
-    const GRID = 3;
+    const params = new URLSearchParams(location.search);
+    const MODE = params.get('mode') === 'hard' ? 'hard' : 'easy';
+    const GRID = MODE === 'hard' ? 4 : 3;
     const TILE_SIZE = 100;
     const TOTAL = GRID * GRID;
+
+    // Highlight active mode button
+    document.getElementById('btn-' + MODE).style.cssText +=
+      ';background:#e94560;color:#fff';
+
+    // Set board grid template to match the active mode
+    const boardEl = document.getElementById('board');
+    boardEl.style.gridTemplateColumns = `repeat(${GRID}, ${TILE_SIZE}px)`;
+    boardEl.style.gridTemplateRows    = `repeat(${GRID}, ${TILE_SIZE}px)`;
 
     let IMAGE_URL = '';
 
     document.getElementById('date-label').textContent =
-      `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`;
+      `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })} · ${MODE.toUpperCase()}`;
 
     // ── Cookie helpers ────────────────────────────────────────────────────
     function setCookie(name, value, days) {
