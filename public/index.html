@@ -196,6 +196,108 @@
       text-align: center;
       margin-top: 4px;
     }
+
+    /* Personal Bests panel */
+    .pb-panel {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pb-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+
+    .pb-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .pb-icon { font-size: 1rem; }
+
+    .pb-label { color: #aaa; flex: 1; }
+
+    .pb-value {
+      font-weight: 700;
+      color: #e94560;
+      font-size: 1rem;
+    }
+
+    /* Badge shelf */
+    .badge-shelf {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .badge-shelf-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+
+    .badge-tray {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge-item {
+      position: relative;
+      font-size: 1.5rem;
+      cursor: default;
+      filter: grayscale(1) opacity(0.3);
+      transition: filter 0.3s;
+    }
+
+    .badge-item.earned {
+      filter: none;
+    }
+
+    .badge-item .badge-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f3460;
+      border: 1px solid #e94560;
+      border-radius: 8px;
+      padding: 6px 10px;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      color: #eee;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .badge-item .badge-tooltip strong {
+      display: block;
+      color: #e94560;
+      margin-bottom: 2px;
+    }
+
+    .badge-item:hover .badge-tooltip { display: block; }
+
+    /* Win record highlights */
+    .win-record {
+      color: #ffd700;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -220,6 +322,25 @@
         <img id="preview" class="preview-img" alt="Preview" />
       </div>
 
+      <div class="pb-panel">
+        <div class="pb-title">Personal Bests</div>
+        <div class="pb-row">
+          <span class="pb-icon">⏱</span>
+          <span class="pb-label">Best Time</span>
+          <span class="pb-value" id="pb-time-display">--</span>
+        </div>
+        <div class="pb-row">
+          <span class="pb-icon">🎯</span>
+          <span class="pb-label">Best Moves</span>
+          <span class="pb-value" id="pb-moves-display">--</span>
+        </div>
+      </div>
+
+      <div class="badge-shelf">
+        <div class="badge-shelf-title">Badges</div>
+        <div class="badge-tray" id="badge-tray"></div>
+      </div>
+
       <button class="btn" id="new-game-btn">New Game</button>
     </div>
 
@@ -229,6 +350,7 @@
         <div class="win-emoji">🎉</div>
         <div class="win-title">Puzzle Solved!</div>
         <div class="win-stats" id="win-stats"></div>
+        <div id="win-records"></div>
         <button class="btn" onclick="newGame()" style="width:160px;margin-top:8px">Play Again</button>
       </div>
     </div>
@@ -246,8 +368,98 @@
     document.getElementById('date-label').textContent =
       `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`;
 
+    // ── Cookie helpers ────────────────────────────────────────────────────
+    function setCookie(name, value, days) {
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+    }
+
+    function getCookie(name) {
+      const match = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+      return match ? decodeURIComponent(match.split('=')[1]) : null;
+    }
+
+    // ── Badges ────────────────────────────────────────────────────────────
+    const BADGES = [
+      { id: 'speed_demon',  label: 'Speed Demon',   desc: 'Complete in under 60 seconds', icon: '⚡', earned: false },
+      { id: 'efficient',    label: 'Efficient',      desc: 'Complete in under 30 moves',   icon: '🎯', earned: false },
+      { id: 'first_solve',  label: 'First Solve',    desc: 'Complete your first puzzle',   icon: '🏆', earned: false },
+      { id: 'daily_player', label: 'Daily Player',   desc: 'Play 7 days in a row',         icon: '📅', earned: false },
+    ];
+
+    function loadEarnedBadges() {
+      const raw = getCookie('earned_badges');
+      if (!raw) return;
+      const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+      BADGES.forEach(b => { if (ids.includes(b.id)) b.earned = true; });
+    }
+
+    function saveEarnedBadges() {
+      const ids = BADGES.filter(b => b.earned).map(b => b.id).join(',');
+      setCookie('earned_badges', ids, 365);
+    }
+
+    function renderBadges() {
+      const tray = document.getElementById('badge-tray');
+      tray.innerHTML = '';
+      BADGES.forEach(badge => {
+        const el = document.createElement('div');
+        el.className = 'badge-item' + (badge.earned ? ' earned' : '');
+        el.innerHTML = `${badge.icon}<div class="badge-tooltip"><strong>${badge.label}</strong>${badge.desc}</div>`;
+        tray.appendChild(el);
+      });
+    }
+
+    function awardBadge(id) {
+      const badge = BADGES.find(b => b.id === id);
+      if (badge && !badge.earned) {
+        badge.earned = true;
+        saveEarnedBadges();
+        renderBadges();
+        return true;
+      }
+      return false;
+    }
+
+    // ── Personal Bests ────────────────────────────────────────────────────
+    function formatTime(secs) {
+      const m = Math.floor(secs / 60);
+      const s = String(secs % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function loadPBDisplay() {
+      const pbTime = getCookie('pb_time');
+      const pbMoves = getCookie('pb_moves');
+      document.getElementById('pb-time-display').textContent =
+        pbTime ? formatTime(parseInt(pbTime, 10)) : '--';
+      document.getElementById('pb-moves-display').textContent =
+        pbMoves ? pbMoves : '--';
+    }
+
+    // Returns array of record strings e.g. ['🎉 New best time!', '🎯 New best moves!']
+    function checkAndSavePBs(elapsedSecs, moveCount) {
+      const records = [];
+      const pbTime = getCookie('pb_time');
+      const pbMoves = getCookie('pb_moves');
+
+      if (pbTime === null || elapsedSecs < parseInt(pbTime, 10)) {
+        setCookie('pb_time', elapsedSecs, 365);
+        document.getElementById('pb-time-display').textContent = formatTime(elapsedSecs);
+        if (pbTime !== null) records.push('🎉 New best time!');
+      }
+
+      if (pbMoves === null || moveCount < parseInt(pbMoves, 10)) {
+        setCookie('pb_moves', moveCount, 365);
+        document.getElementById('pb-moves-display').textContent = moveCount;
+        if (pbMoves !== null) records.push('🎯 New best moves!');
+      }
+
+      return records;
+    }
+
     // ── Puzzle state ──────────────────────────────────────────────────────
-    let tiles = [];      // array of tile values 0-15, 0 = empty
+    let tiles = [];
     let emptyIdx = 0;
     let moves = 0;
     let startTime = null;
@@ -266,11 +478,8 @@
 
     function isSolvable(arr) {
       const inv = countInversions(arr);
-      const emptyRow = Math.floor(arr.indexOf(0) / GRID); // from top (0-indexed)
+      const emptyRow = Math.floor(arr.indexOf(0) / GRID);
       const emptyRowFromBottom = GRID - emptyRow;
-      // For 4x4: solvable iff
-      //   (grid width even) AND (inversions even AND empty on odd row from bottom)
-      //     OR (inversions odd AND empty on even row from bottom)
       return (inv % 2 === 0) === (emptyRowFromBottom % 2 === 1);
     }
 
@@ -282,7 +491,7 @@
     }
 
     function generateSolvable() {
-      const arr = Array.from({ length: TOTAL }, (_, i) => i); // 0..15
+      const arr = Array.from({ length: TOTAL }, (_, i) => i);
       do { shuffle(arr); } while (!isSolvable(arr) || isSolved(arr));
       return arr;
     }
@@ -302,16 +511,13 @@
         tile.dataset.idx = idx;
 
         if (val !== 0 && imageLoaded) {
-          // val 1-15 → position in solved state = val (0-based col/row within the 4x4)
-          const srcPos = val; // solved position
+          const srcPos = val;
           const col = srcPos % GRID;
           const row = Math.floor(srcPos / GRID);
-          // background-size covers full 400x400 (4×100), position offsets
           tile.style.backgroundImage = `url('${IMAGE_URL}')`;
           tile.style.backgroundSize = `${GRID * TILE_SIZE}px ${GRID * TILE_SIZE}px`;
           tile.style.backgroundPosition = `-${col * TILE_SIZE}px -${row * TILE_SIZE}px`;
         } else if (val !== 0) {
-          // Placeholder color while image loads
           tile.style.background = `hsl(${val * 23}, 50%, 30%)`;
         }
 
@@ -337,7 +543,6 @@
       const movable = getMovable();
       if (!movable.includes(idx)) return;
 
-      // Swap
       [tiles[emptyIdx], tiles[idx]] = [tiles[idx], tiles[emptyIdx]];
       emptyIdx = idx;
       moves++;
@@ -368,20 +573,38 @@
       timerInterval = null;
     }
 
+    function elapsedSecs() {
+      if (!startTime) return 0;
+      return Math.floor((Date.now() - startTime) / 1000);
+    }
+
     function elapsedStr() {
-      if (!startTime) return '0:00';
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const m = Math.floor(elapsed / 60);
-      const s = String(elapsed % 60).padStart(2, '0');
-      return `${m}:${s}`;
+      return formatTime(elapsedSecs());
     }
 
     // ── Win ───────────────────────────────────────────────────────────────
     function winGame() {
       solved = true;
       stopTimer();
+
+      const secs = elapsedSecs();
+      const records = checkAndSavePBs(secs, moves);
+
+      // Award badges
+      const newBadges = [];
+      if (awardBadge('first_solve')) newBadges.push('🏆 First Solve!');
+      if (secs < 60 && awardBadge('speed_demon')) newBadges.push('⚡ Speed Demon!');
+      if (moves < 30 && awardBadge('efficient')) newBadges.push('🎯 Efficient!');
+
       document.getElementById('win-stats').textContent =
         `${moves} moves · ${elapsedStr()}`;
+
+      const allHighlights = [...records, ...newBadges];
+      const recordsEl = document.getElementById('win-records');
+      recordsEl.innerHTML = allHighlights
+        .map(msg => `<div class="win-record">${msg}</div>`)
+        .join('');
+
       document.getElementById('win-overlay').classList.add('show');
     }
 
@@ -396,6 +619,7 @@
       document.getElementById('move-count').textContent = '0';
       document.getElementById('timer').textContent = '0:00';
       document.getElementById('win-overlay').classList.remove('show');
+      document.getElementById('win-records').innerHTML = '';
       render();
     }
 
@@ -420,6 +644,9 @@
 
     document.getElementById('new-game-btn').addEventListener('click', newGame);
 
+    loadEarnedBadges();
+    renderBadges();
+    loadPBDisplay();
     newGame();
 
     fetch('/api/config')
