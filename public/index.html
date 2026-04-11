@@ -5,382 +5,535 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>City Puzzle</title>
   <style>
+    /* ── Theme tokens ───────────────────────────────────────────────────── */
+    :root {
+      --bg:          #1a1a2e;
+      --surface:     #16213e;
+      --board-bg:    #0f3460;
+      --accent:      #e94560;
+      --accent-dark: #c0392b;
+      --text:        #eee;
+      --text-muted:  #888;
+      --text-dim:    #aaa;
+      --gold:        #ffd700;
+      --empty-tile:  #0a1628;
+      --board-max:   480px;
+      --gutter:      12px;
+      --radius:      12px;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #1a1a2e;
-      color: #eee;
+      background: var(--bg);
+      color: var(--text);
       font-family: 'Segoe UI', system-ui, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+      overflow-x: hidden;
     }
 
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 4px;
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px var(--gutter);
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
       background: linear-gradient(135deg, #e94560, #0f3460);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .subtitle {
-      font-size: 0.85rem;
-      color: #888;
-      margin-bottom: 20px;
-    }
+    .mode-toggle { display: flex; gap: 6px; }
 
-    .game-area {
-      display: flex;
-      gap: 24px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      min-width: 160px;
-    }
-
-    .stats {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .stat-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-    }
-
-    .stat-value {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #e94560;
-    }
-
-    .preview-box {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .preview-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-    }
-
-    .preview-img {
-      width: 140px;
-      height: 140px;
-      border-radius: 8px;
-      object-fit: cover;
-      display: block;
-    }
-
-    .btn {
-      background: linear-gradient(135deg, #e94560, #c0392b);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 20px;
-      font-size: 1rem;
+    .mode-btn {
+      padding: 5px 12px;
+      border-radius: 20px;
       font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
+      font-size: 0.8rem;
+      text-decoration: none;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      background: transparent;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .mode-btn.active { background: var(--accent); color: #fff; }
+
+    /* ── Main grid — mobile-first, single column ────────────────────────── */
+    .main {
+      display: grid;
       width: 100%;
+      padding: var(--gutter);
+      gap: 10px;
+      grid-template-columns: minmax(0, var(--board-max));
+      grid-template-areas:
+        "board"
+        "stats"
+        "pb"
+        "badges"
+        "loading";
+      justify-content: center;
+      flex: 1;
     }
 
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-
-    /* Puzzle board */
-    .board-wrapper {
-      position: relative;
+    /* ── Desktop two-column layout ──────────────────────────────────────── */
+    @media (min-width: 768px) {
+      .main {
+        grid-template-columns: minmax(0, var(--board-max)) minmax(0, 260px);
+        grid-template-rows: auto auto auto 1fr auto;
+        grid-template-areas:
+          "board stats"
+          "board pb"
+          "board badges"
+          "board ."
+          "board loading";
+        column-gap: 24px;
+        row-gap: 14px;
+        padding: 24px;
+        max-width: 820px;
+        margin: 0 auto;
+        align-items: start;
+      }
     }
+
+    /* ── Puzzle board (hero) ─────────────────────────────────────────────── */
+    .board-section { grid-area: board; }
+
+    .board-wrapper { position: relative; width: 100%; }
 
     #board {
       display: grid;
-      /* grid-template-* set dynamically by JS based on mode */
       gap: 3px;
-      background: #0f3460;
-      border-radius: 12px;
+      background: var(--board-bg);
+      border-radius: var(--radius);
       padding: 3px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      width: 100%;
     }
 
     .tile {
-      width: 100px;
-      height: 100px;
+      aspect-ratio: 1;
       border-radius: 6px;
-      /* background-size set dynamically by JS */
       cursor: pointer;
-      transition: transform 0.12s ease;
+      transition: transform 0.15s ease;
       position: relative;
       overflow: hidden;
     }
 
-    .tile:hover:not(.empty) {
-      transform: scale(1.03);
-      z-index: 1;
-    }
+    .tile:hover:not(.empty) { transform: scale(1.03); z-index: 1; }
+    .tile:active:not(.empty) { transform: scale(0.97); }
 
     .tile.empty {
-      background: #0a1628 !important;
+      background: var(--empty-tile) !important;
       cursor: default;
       box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
     }
 
-    .tile.moving {
-      transition: transform 0.15s ease;
+    .tile.moving { transition: transform 0.15s ease; }
+
+    /* ── Preview thumbnail (overlay on board, bottom-right) ─────────────── */
+    .preview-thumb {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      opacity: 0.85;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.25);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 5;
+      display: none;
     }
 
-    /* Win overlay */
+    .preview-thumb.loaded { display: block; }
+    .preview-thumb:hover  { opacity: 1; transform: scale(1.06); }
+
+    /* ── Preview full-size modal ────────────────────────────────────────── */
+    .preview-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .preview-modal.show { display: flex; }
+
+    .preview-modal-inner { position: relative; max-width: 100%; }
+
+    .preview-modal img {
+      max-width: min(90vw, 600px);
+      max-height: 80vh;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+      display: block;
+    }
+
+    .preview-modal-close {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    /* ── Win overlay (over completed board) ─────────────────────────────── */
     #win-overlay {
       display: none;
       position: absolute;
       inset: 0;
-      background: rgba(10, 22, 40, 0.92);
-      border-radius: 12px;
+      background: rgba(10, 22, 40, 0.93);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border-radius: var(--radius);
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       text-align: center;
       padding: 20px;
+      z-index: 10;
     }
 
     #win-overlay.show { display: flex; }
 
-    .win-emoji { font-size: 3rem; }
+    .win-emoji  { font-size: 3rem; }
 
-    .win-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #e94560;
-    }
+    .win-title  { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
 
-    .win-stats {
-      font-size: 0.9rem;
-      color: #aaa;
-    }
+    .win-stats  { font-size: 0.9rem; color: var(--text-dim); }
 
-    .loading-msg {
-      color: #888;
-      font-size: 0.85rem;
-      text-align: center;
-      margin-top: 4px;
-    }
+    .win-record { color: var(--gold); font-weight: 600; font-size: 0.85rem; }
 
-    /* Personal Bests panel */
-    .pb-panel {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .pb-title {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-      margin-bottom: 2px;
-    }
-
-    .pb-row {
+    /* ── Live stats row ──────────────────────────────────────────────────── */
+    .stats-row {
+      grid-area: stats;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
+      gap: 10px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 12px 16px;
     }
 
-    .pb-icon { font-size: 1rem; }
-
-    .pb-label { color: #aaa; flex: 1; }
-
-    .pb-value {
-      font-weight: 700;
-      color: #e94560;
-      font-size: 1rem;
-    }
-
-    /* Badge shelf */
-    .badge-shelf {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 14px 16px;
+    .stat-chip {
       display: flex;
       flex-direction: column;
+      align-items: center;
+      min-width: 52px;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.2;
+    }
+
+    .stats-divider {
+      width: 1px;
+      height: 30px;
+      background: rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+
+    .stats-spacer { flex: 1; }
+
+    /* ── Shared button ───────────────────────────────────────────────────── */
+    .btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn:hover  { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    /* ── Personal bests row (two cards) ──────────────────────────────────── */
+    .pb-row {
+      grid-area: pb;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
+    }
+
+    .pb-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pb-icon  { font-size: 1.2rem; flex-shrink: 0; }
+
+    .pb-info  { display: flex; flex-direction: column; min-width: 0; }
+
+    .pb-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .pb-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Badge shelf (horizontal scroll) ─────────────────────────────────── */
+    .badge-section {
+      grid-area: badges;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 12px 14px;
     }
 
     .badge-shelf-title {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #888;
+      color: var(--text-muted);
+      margin-bottom: 10px;
     }
 
     .badge-tray {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
     }
 
+    .badge-tray::-webkit-scrollbar { display: none; }
+
     .badge-item {
-      position: relative;
-      font-size: 1.5rem;
-      cursor: default;
-      filter: grayscale(1) opacity(0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      filter: grayscale(1) opacity(0.35);
       transition: filter 0.3s;
+      flex-shrink: 0;
+      min-width: 60px;
+      user-select: none;
     }
 
     .badge-item.earned {
       filter: none;
+      background: rgba(233,69,96,0.1);
+      border-color: rgba(233,69,96,0.3);
     }
 
-    .badge-item .badge-tooltip {
-      display: none;
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: #0f3460;
-      border: 1px solid #e94560;
-      border-radius: 8px;
-      padding: 6px 10px;
+    .badge-icon  { font-size: 1.3rem; line-height: 1; }
+
+    .badge-label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-align: center;
       white-space: nowrap;
-      font-size: 0.75rem;
-      color: #eee;
-      z-index: 10;
+    }
+
+    .badge-item.earned .badge-label { color: var(--accent); }
+
+    /* Tap-activated badge tooltip popup */
+    #badge-popup {
+      display: none;
+      position: fixed;
+      background: var(--board-bg);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: var(--text);
+      z-index: 300;
+      max-width: 200px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
       pointer-events: none;
     }
 
-    .badge-item .badge-tooltip strong {
-      display: block;
-      color: #e94560;
-      margin-bottom: 2px;
+    #badge-popup.show { display: block; }
+
+    #badge-popup strong { display: block; color: var(--accent); margin-bottom: 4px; }
+
+    /* ── Loading message ─────────────────────────────────────────────────── */
+    #loading-msg {
+      grid-area: loading;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-align: center;
+      min-height: 1.2em;
     }
 
-    .badge-item:hover .badge-tooltip { display: block; }
-
-    /* Win record highlights */
-    .win-record {
-      color: #ffd700;
-      font-weight: 600;
-      font-size: 0.85rem;
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 12px var(--gutter);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      opacity: 0.55;
+      flex-shrink: 0;
     }
   </style>
 </head>
 <body>
-  <h1>City Puzzle</h1>
-  <p class="subtitle" id="date-label">Loading today's city...</p>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <a href="?mode=easy" id="btn-easy" style="padding:6px 16px;border-radius:8px;font-weight:600;font-size:0.85rem;text-decoration:none;border:2px solid #e94560;color:#e94560;background:transparent">Easy (3×3)</a>
-    <a href="?mode=hard" id="btn-hard" style="padding:6px 16px;border-radius:8px;font-weight:600;font-size:0.85rem;text-decoration:none;border:2px solid #e94560;color:#e94560;background:transparent">Hard (4×4)</a>
-  </div>
 
-  <div class="game-area">
-    <div class="sidebar">
-      <div class="stats">
-        <div class="stat">
-          <span class="stat-label">Moves</span>
-          <span class="stat-value" id="move-count">0</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Time</span>
-          <span class="stat-value" id="timer">0:00</span>
+  <!-- ① Header bar: title left, mode toggle right -->
+  <header class="header">
+    <h1>City Puzzle</h1>
+    <nav class="mode-toggle">
+      <a href="?mode=easy" class="mode-btn" id="btn-easy">Easy 3×3</a>
+      <a href="?mode=hard" class="mode-btn" id="btn-hard">Hard 4×4</a>
+    </nav>
+  </header>
+
+  <main class="main">
+
+    <!-- ② Hero: puzzle board -->
+    <div class="board-section">
+      <div class="board-wrapper">
+        <div id="board"></div>
+        <!-- Reference thumbnail overlay — tap to expand -->
+        <img id="preview-thumb" class="preview-thumb" alt="Reference image" />
+        <!-- Win modal over the board -->
+        <div id="win-overlay">
+          <div class="win-emoji">🎉</div>
+          <div class="win-title">Puzzle Solved!</div>
+          <div class="win-stats" id="win-stats"></div>
+          <div id="win-records"></div>
+          <button class="btn" onclick="newGame()" style="margin-top:8px">Play Again</button>
         </div>
       </div>
+    </div>
 
-      <div class="preview-box">
-        <span class="preview-label">Target</span>
-        <img id="preview" class="preview-img" alt="Preview" />
+    <!-- ③ Live stats row: Moves | Time | — | New Game -->
+    <div class="stats-row">
+      <div class="stat-chip">
+        <span class="stat-label">Moves</span>
+        <span class="stat-value" id="move-count">0</span>
       </div>
+      <div class="stats-divider"></div>
+      <div class="stat-chip">
+        <span class="stat-label">Time</span>
+        <span class="stat-value" id="timer">0:00</span>
+      </div>
+      <div class="stats-spacer"></div>
+      <button class="btn" id="new-game-btn">New Game</button>
+    </div>
 
-      <div class="pb-panel">
-        <div class="pb-title">Personal Bests</div>
-        <div class="pb-row">
-          <span class="pb-icon">⏱</span>
+    <!-- ④ Personal bests: two side-by-side cards -->
+    <div class="pb-row">
+      <div class="pb-card">
+        <span class="pb-icon">⏱</span>
+        <div class="pb-info">
           <span class="pb-label">Best Time</span>
           <span class="pb-value" id="pb-time-display">--</span>
         </div>
-        <div class="pb-row">
-          <span class="pb-icon">🎯</span>
+      </div>
+      <div class="pb-card">
+        <span class="pb-icon">🎯</span>
+        <div class="pb-info">
           <span class="pb-label">Best Moves</span>
           <span class="pb-value" id="pb-moves-display">--</span>
         </div>
       </div>
-
-      <div class="badge-shelf">
-        <div class="badge-shelf-title">Badges</div>
-        <div class="badge-tray" id="badge-tray"></div>
-      </div>
-
-      <button class="btn" id="new-game-btn">New Game</button>
     </div>
 
-    <div class="board-wrapper">
-      <div id="board"></div>
-      <div id="win-overlay">
-        <div class="win-emoji">🎉</div>
-        <div class="win-title">Puzzle Solved!</div>
-        <div class="win-stats" id="win-stats"></div>
-        <div id="win-records"></div>
-        <button class="btn" onclick="newGame()" style="width:160px;margin-top:8px">Play Again</button>
-      </div>
+    <!-- ⑤ Badge shelf (horizontally scrollable) -->
+    <div class="badge-section">
+      <div class="badge-shelf-title">Badges</div>
+      <div class="badge-tray" id="badge-tray"></div>
+    </div>
+
+    <p id="loading-msg">Loading image...</p>
+
+  </main>
+
+  <!-- Preview full-size modal (toggled by thumbnail tap) -->
+  <div class="preview-modal" id="preview-modal">
+    <div class="preview-modal-inner">
+      <img id="preview-modal-img" src="" alt="Full reference image" />
+      <div class="preview-modal-close" id="preview-modal-close">×</div>
     </div>
   </div>
 
-  <p class="loading-msg" id="loading-msg">Loading image...</p>
+  <!-- Badge tooltip popup (tap-activated) -->
+  <div id="badge-popup"></div>
+
+  <!-- ⑥ Footer -->
+  <footer>Daily City Puzzle · <span id="footer-date"></span></footer>
 
   <script>
     const params = new URLSearchParams(location.search);
-    const MODE = params.get('mode') === 'hard' ? 'hard' : 'easy';
-    const GRID = MODE === 'hard' ? 4 : 3;
-    const TILE_SIZE = 100;
+    const MODE  = params.get('mode') === 'hard' ? 'hard' : 'easy';
+    const GRID  = MODE === 'hard' ? 4 : 3;
     const TOTAL = GRID * GRID;
 
-    // Highlight active mode button
-    document.getElementById('btn-' + MODE).style.cssText +=
-      ';background:#e94560;color:#fff';
+    // Activate mode button
+    document.getElementById('btn-' + MODE).classList.add('active');
 
-    // Set board grid template to match the active mode
+    // Footer date
+    document.getElementById('footer-date').textContent =
+      new Date().toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+      });
+
     const boardEl = document.getElementById('board');
-    boardEl.style.gridTemplateColumns = `repeat(${GRID}, ${TILE_SIZE}px)`;
-    boardEl.style.gridTemplateRows    = `repeat(${GRID}, ${TILE_SIZE}px)`;
-
-    let IMAGE_URL = '';
-
-    document.getElementById('date-label').textContent =
-      `Daily puzzle — ${new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })} · ${MODE.toUpperCase()}`;
 
     // ── Cookie helpers ────────────────────────────────────────────────────
     function setCookie(name, value, days) {
@@ -395,10 +548,10 @@
 
     // ── Badges ────────────────────────────────────────────────────────────
     const BADGES = [
-      { id: 'speed_demon',  label: 'Speed Demon',   desc: 'Complete in under 60 seconds', icon: '⚡', earned: false },
-      { id: 'efficient',    label: 'Efficient',      desc: 'Complete in under 30 moves',   icon: '🎯', earned: false },
-      { id: 'first_solve',  label: 'First Solve',    desc: 'Complete your first puzzle',   icon: '🏆', earned: false },
-      { id: 'daily_player', label: 'Daily Player',   desc: 'Play 7 days in a row',         icon: '📅', earned: false },
+      { id: 'speed_demon',  label: 'Speed Demon',  desc: 'Complete in under 60 seconds', icon: '⚡', earned: false },
+      { id: 'efficient',    label: 'Efficient',     desc: 'Complete in under 30 moves',   icon: '🎯', earned: false },
+      { id: 'first_solve',  label: 'First Solve',   desc: 'Complete your first puzzle',   icon: '🏆', earned: false },
+      { id: 'daily_player', label: 'Daily Player',  desc: 'Play 7 days in a row',         icon: '📅', earned: false },
     ];
 
     function loadEarnedBadges() {
@@ -413,13 +566,42 @@
       setCookie('earned_badges', ids, 365);
     }
 
+    const badgePopup = document.getElementById('badge-popup');
+    let badgePopupTimer = null;
+
+    function showBadgePopup(badge, anchorEl) {
+      clearTimeout(badgePopupTimer);
+      badgePopup.innerHTML = `<strong>${badge.icon} ${badge.label}</strong>${badge.desc}`;
+      badgePopup.classList.add('show');
+
+      // Measure after making visible
+      const rect    = anchorEl.getBoundingClientRect();
+      const popH    = badgePopup.offsetHeight;
+      const popW    = 200;
+      let left = rect.left + rect.width / 2 - popW / 2;
+      let top  = rect.top - popH - 8;
+
+      // Clamp horizontally
+      left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
+      // Flip below if off top edge
+      if (top < 8) top = rect.bottom + 8;
+
+      badgePopup.style.left = left + 'px';
+      badgePopup.style.top  = top  + 'px';
+
+      badgePopupTimer = setTimeout(() => badgePopup.classList.remove('show'), 3000);
+    }
+
     function renderBadges() {
       const tray = document.getElementById('badge-tray');
       tray.innerHTML = '';
       BADGES.forEach(badge => {
         const el = document.createElement('div');
         el.className = 'badge-item' + (badge.earned ? ' earned' : '');
-        el.innerHTML = `${badge.icon}<div class="badge-tooltip"><strong>${badge.label}</strong>${badge.desc}</div>`;
+        el.innerHTML =
+          `<span class="badge-icon">${badge.icon}</span>` +
+          `<span class="badge-label">${badge.label}</span>`;
+        el.addEventListener('click', () => showBadgePopup(badge, el));
         tray.appendChild(el);
       });
     }
@@ -435,6 +617,11 @@
       return false;
     }
 
+    // Dismiss badge popup on outside tap
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.badge-item')) badgePopup.classList.remove('show');
+    });
+
     // ── Personal Bests ────────────────────────────────────────────────────
     function formatTime(secs) {
       const m = Math.floor(secs / 60);
@@ -443,18 +630,16 @@
     }
 
     function loadPBDisplay() {
-      const pbTime = getCookie('pb_time');
+      const pbTime  = getCookie('pb_time');
       const pbMoves = getCookie('pb_moves');
-      document.getElementById('pb-time-display').textContent =
-        pbTime ? formatTime(parseInt(pbTime, 10)) : '--';
-      document.getElementById('pb-moves-display').textContent =
-        pbMoves ? pbMoves : '--';
+      document.getElementById('pb-time-display').textContent  = pbTime  ? formatTime(parseInt(pbTime, 10)) : '--';
+      document.getElementById('pb-moves-display').textContent = pbMoves ? pbMoves : '--';
     }
 
-    // Returns array of record strings e.g. ['🎉 New best time!', '🎯 New best moves!']
+    // Returns array of record strings e.g. ['🎉 New best time!']
     function checkAndSavePBs(elapsedSecs, moveCount) {
       const records = [];
-      const pbTime = getCookie('pb_time');
+      const pbTime  = getCookie('pb_time');
       const pbMoves = getCookie('pb_moves');
 
       if (pbTime === null || elapsedSecs < parseInt(pbTime, 10)) {
@@ -473,13 +658,14 @@
     }
 
     // ── Puzzle state ──────────────────────────────────────────────────────
-    let tiles = [];
-    let emptyIdx = 0;
-    let moves = 0;
-    let startTime = null;
+    let tiles        = [];
+    let emptyIdx     = 0;
+    let moves        = 0;
+    let startTime    = null;
     let timerInterval = null;
-    let solved = false;
-    let imageLoaded = false;
+    let solved       = false;
+    let imageLoaded  = false;
+    let IMAGE_URL    = '';
 
     // ── Solvability ───────────────────────────────────────────────────────
     function countInversions(arr) {
@@ -491,8 +677,8 @@
     }
 
     function isSolvable(arr) {
-      const inv = countInversions(arr);
-      const emptyRow = Math.floor(arr.indexOf(0) / GRID);
+      const inv              = countInversions(arr);
+      const emptyRow         = Math.floor(arr.indexOf(0) / GRID);
       const emptyRowFromBottom = GRID - emptyRow;
       return (inv % 2 === 0) === (emptyRowFromBottom % 2 === 1);
     }
@@ -514,10 +700,16 @@
       return arr.every((v, i) => v === i);
     }
 
-    // ── Rendering ─────────────────────────────────────────────────────────
+    // ── Rendering (responsive tile sizing) ───────────────────────────────
     function render() {
-      const board = document.getElementById('board');
-      board.innerHTML = '';
+      // Compute pixel tile size from the board's current rendered width.
+      // Board padding: 3px each side = 6px; gaps: 3px × (GRID-1).
+      const boardWidth = boardEl.offsetWidth ||
+        Math.floor(Math.min(window.innerWidth, 480) - 2 * 12);
+      const tileSize = Math.floor((boardWidth - 6 - 3 * (GRID - 1)) / GRID);
+
+      boardEl.innerHTML = '';
+      boardEl.style.gridTemplateColumns = `repeat(${GRID}, 1fr)`;
 
       tiles.forEach((val, idx) => {
         const tile = document.createElement('div');
@@ -525,19 +717,23 @@
         tile.dataset.idx = idx;
 
         if (val !== 0 && imageLoaded) {
-          const srcPos = val;
-          const col = srcPos % GRID;
-          const row = Math.floor(srcPos / GRID);
-          tile.style.backgroundImage = `url('${IMAGE_URL}')`;
-          tile.style.backgroundSize = `${GRID * TILE_SIZE}px ${GRID * TILE_SIZE}px`;
-          tile.style.backgroundPosition = `-${col * TILE_SIZE}px -${row * TILE_SIZE}px`;
+          const col = val % GRID;
+          const row = Math.floor(val / GRID);
+          tile.style.backgroundImage    = `url('${IMAGE_URL}')`;
+          tile.style.backgroundSize     = `${GRID * tileSize}px ${GRID * tileSize}px`;
+          tile.style.backgroundPosition = `-${col * tileSize}px -${row * tileSize}px`;
         } else if (val !== 0) {
           tile.style.background = `hsl(${val * 23}, 50%, 30%)`;
         }
 
         tile.addEventListener('click', () => handleClick(idx));
-        board.appendChild(tile);
+        boardEl.appendChild(tile);
       });
+    }
+
+    // Re-render when board dimensions change (resize / orientation change)
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => { if (tiles.length) render(); }).observe(boardEl);
     }
 
     // ── Move logic ────────────────────────────────────────────────────────
@@ -545,10 +741,10 @@
       const row = Math.floor(emptyIdx / GRID);
       const col = emptyIdx % GRID;
       const neighbors = [];
-      if (row > 0) neighbors.push(emptyIdx - GRID);
-      if (row < GRID - 1) neighbors.push(emptyIdx + GRID);
-      if (col > 0) neighbors.push(emptyIdx - 1);
-      if (col < GRID - 1) neighbors.push(emptyIdx + 1);
+      if (row > 0)          neighbors.push(emptyIdx - GRID);
+      if (row < GRID - 1)   neighbors.push(emptyIdx + GRID);
+      if (col > 0)          neighbors.push(emptyIdx - 1);
+      if (col < GRID - 1)   neighbors.push(emptyIdx + 1);
       return neighbors;
     }
 
@@ -592,30 +788,25 @@
       return Math.floor((Date.now() - startTime) / 1000);
     }
 
-    function elapsedStr() {
-      return formatTime(elapsedSecs());
-    }
+    function elapsedStr() { return formatTime(elapsedSecs()); }
 
     // ── Win ───────────────────────────────────────────────────────────────
     function winGame() {
       solved = true;
       stopTimer();
 
-      const secs = elapsedSecs();
+      const secs    = elapsedSecs();
       const records = checkAndSavePBs(secs, moves);
 
-      // Award badges
       const newBadges = [];
-      if (awardBadge('first_solve')) newBadges.push('🏆 First Solve!');
-      if (secs < 60 && awardBadge('speed_demon')) newBadges.push('⚡ Speed Demon!');
-      if (moves < 30 && awardBadge('efficient')) newBadges.push('🎯 Efficient!');
+      if (awardBadge('first_solve'))               newBadges.push('🏆 First Solve!');
+      if (secs  < 60  && awardBadge('speed_demon')) newBadges.push('⚡ Speed Demon!');
+      if (moves < 30  && awardBadge('efficient'))   newBadges.push('🎯 Efficient!');
 
-      document.getElementById('win-stats').textContent =
-        `${moves} moves · ${elapsedStr()}`;
+      document.getElementById('win-stats').textContent = `${moves} moves · ${elapsedStr()}`;
 
       const allHighlights = [...records, ...newBadges];
-      const recordsEl = document.getElementById('win-records');
-      recordsEl.innerHTML = allHighlights
+      document.getElementById('win-records').innerHTML = allHighlights
         .map(msg => `<div class="win-record">${msg}</div>`)
         .join('');
 
@@ -625,25 +816,41 @@
     // ── New game ──────────────────────────────────────────────────────────
     function newGame() {
       stopTimer();
-      tiles = generateSolvable();
+      tiles    = generateSolvable();
       emptyIdx = tiles.indexOf(0);
-      moves = 0;
+      moves    = 0;
       startTime = null;
-      solved = false;
+      solved   = false;
       document.getElementById('move-count').textContent = '0';
-      document.getElementById('timer').textContent = '0:00';
+      document.getElementById('timer').textContent      = '0:00';
       document.getElementById('win-overlay').classList.remove('show');
       document.getElementById('win-records').innerHTML = '';
       render();
     }
 
-    // ── Boot ──────────────────────────────────────────────────────────────
+    // ── Preview thumbnail & modal ─────────────────────────────────────────
+    const previewThumb    = document.getElementById('preview-thumb');
+    const previewModal    = document.getElementById('preview-modal');
+    const previewModalImg = document.getElementById('preview-modal-img');
+
+    previewThumb.addEventListener('click', () => previewModal.classList.add('show'));
+
+    document.getElementById('preview-modal-close').addEventListener('click', () =>
+      previewModal.classList.remove('show'));
+
+    previewModal.addEventListener('click', e => {
+      if (e.target === previewModal) previewModal.classList.remove('show');
+    });
+
+    // ── Image loading ─────────────────────────────────────────────────────
     function loadImage(url) {
       IMAGE_URL = url;
-      document.getElementById('preview').src = IMAGE_URL;
+      previewThumb.src    = IMAGE_URL;
+      previewModalImg.src = IMAGE_URL;
       const img = new Image();
       img.onload = () => {
         imageLoaded = true;
+        previewThumb.classList.add('loaded');
         document.getElementById('loading-msg').textContent = '';
         render();
       };
@@ -656,6 +863,7 @@
       img.src = IMAGE_URL;
     }
 
+    // ── Boot ──────────────────────────────────────────────────────────────
     document.getElementById('new-game-btn').addEventListener('click', newGame);
 
     loadEarnedBadges();
