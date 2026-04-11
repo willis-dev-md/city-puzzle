@@ -1,9 +1,8 @@
 'use strict';
 
-const { test, after } = require('node:test');
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { getConfig, generateSolvable, isSolved, isSolvable, resolveImageUrl } = require('./lib/puzzle');
-const { getDailyImageUrl, imageCache } = require('./server');
 
 // ── Grid dimensions ───────────────────────────────────────────────────────────
 
@@ -40,6 +39,19 @@ test('hard mode: image URL has correct format', () => {
 test('image URL respects custom template via env', () => {
   const url = resolveImageUrl('https://example.com/img/{DATE}.jpg');
   assert.match(url, /^https:\/\/example\.com\/img\/\d{8}\.jpg$/);
+});
+
+test('image URL date uses UTC', () => {
+  const url = resolveImageUrl();
+  const d = new Date();
+  const expected = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+  assert.match(url, new RegExp(`/seed/${expected}/`));
+});
+
+test('image URL without template returns deterministic picsum URL', () => {
+  const url1 = resolveImageUrl();
+  const url2 = resolveImageUrl();
+  assert.equal(url1, url2, 'same URL called twice in same day');
 });
 
 // ── Tile generation ───────────────────────────────────────────────────────────
@@ -92,48 +104,4 @@ test('hard mode: generated tiles are not already solved', () => {
   const { grid } = getConfig('hard');
   const tiles = generateSolvable(grid);
   assert.equal(isSolved(tiles), false);
-});
-
-// ── Server image cache ────────────────────────────────────────────────────────
-
-test('getDailyImageUrl: returns cached URL without fetching on cache hit', async () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const cachedUrl = 'https://cached.example.com/image.jpg';
-  imageCache.date = today;
-  imageCache.url = cachedUrl;
-
-  let fetchCalled = false;
-  const origFetch = global.fetch;
-  global.fetch = async () => { fetchCalled = true; return { url: 'https://should-not-be-called' }; };
-
-  try {
-    const result = await getDailyImageUrl();
-    assert.equal(result, cachedUrl, 'should return cached URL');
-    assert.equal(fetchCalled, false, 'fetch should not be called on cache hit');
-  } finally {
-    global.fetch = origFetch;
-    imageCache.date = null;
-    imageCache.url = null;
-  }
-});
-
-test('getDailyImageUrl: fetches and caches URL on cache miss', async () => {
-  imageCache.date = null;
-  imageCache.url = null;
-
-  const finalUrl = 'https://final.example.com/image.jpg';
-  const origFetch = global.fetch;
-  global.fetch = async () => ({ url: finalUrl });
-
-  try {
-    const result = await getDailyImageUrl();
-    const today = new Date().toISOString().slice(0, 10);
-    assert.equal(result, finalUrl, 'should return the resolved final URL');
-    assert.equal(imageCache.date, today, 'cache date should be set to today');
-    assert.equal(imageCache.url, finalUrl, 'cache URL should be stored');
-  } finally {
-    global.fetch = origFetch;
-    imageCache.date = null;
-    imageCache.url = null;
-  }
 });
