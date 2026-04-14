@@ -7,16 +7,33 @@
   <style>
     /* ── Theme tokens ───────────────────────────────────────────────────── */
     :root {
-      --bg:          #1a1a2e;
-      --surface:     #16213e;
-      --board-bg:    #0f3460;
-      --accent:      #e94560;
-      --accent-dark: #c0392b;
-      --text:        #eee;
-      --text-muted:  #888;
-      --text-dim:    #aaa;
-      --gold:        #ffd700;
-      --empty-tile:  #0a1628;
+      /* Neutral, calmer dark theme (better contrast, less neon) */
+      --bg:          #0b1220;
+      --surface:     #0f1a2b;
+      --board-bg:    #0c1f3a;
+
+      /* Primary accent (teal → blue) */
+      --accent:      #2dd4bf;
+      --accent-dark: #2563eb;
+
+      --text:        #e7edf7;
+      --text-muted:  rgba(231,237,247,0.62);
+      --text-dim:    rgba(231,237,247,0.78);
+      --gold:        #fbbf24;
+      --empty-tile:  #071226;
+
+      /* Surfaces/borders */
+      --border:      rgba(231,237,247,0.12);
+      --border-strong: rgba(231,237,247,0.18);
+      --shadow:      0 8px 28px rgba(0,0,0,0.55);
+      --shadow-soft: 0 2px 10px rgba(0,0,0,0.40);
+
+      /* Focus ring */
+      --focus:       rgba(45,212,191,0.45);
+
+      /* Fallback tile palette (when image fails to load) */
+      --tile-sat:    46%;
+      --tile-lit:    34%;
       --board-max:   480px;
       --gutter:      12px;
       --radius:      12px;
@@ -34,6 +51,11 @@
       overflow-x: hidden;
     }
 
+    :focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
     /* ── Header ─────────────────────────────────────────────────────────── */
     .header {
       display: flex;
@@ -41,14 +63,14 @@
       justify-content: space-between;
       padding: 10px var(--gutter);
       background: var(--surface);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      box-shadow: var(--shadow-soft);
       flex-shrink: 0;
     }
 
     .header h1 {
       font-size: 1.25rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #e94560, #0f3460);
+      background: linear-gradient(135deg, var(--accent), rgba(37,99,235,0.95));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -62,15 +84,15 @@
       font-weight: 600;
       font-size: 0.8rem;
       text-decoration: none;
-      border: 2px solid var(--accent);
+      border: 1px solid var(--border-strong);
       color: var(--accent);
-      background: transparent;
+      background: rgba(231,237,247,0.02);
       transition: background 0.2s, color 0.2s;
       white-space: nowrap;
       line-height: 1.4;
     }
 
-    .mode-btn.active { background: var(--accent); color: #fff; }
+    .mode-btn.active { background: rgba(45,212,191,0.16); border-color: rgba(45,212,191,0.35); color: var(--text); }
 
     /* ── Main grid — mobile-first, single column ────────────────────────── */
     .main {
@@ -122,7 +144,7 @@
       background: var(--board-bg);
       border-radius: var(--radius);
       padding: 3px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow);
       width: 100%;
     }
 
@@ -171,8 +193,8 @@
       border-radius: 8px;
       object-fit: cover;
       cursor: pointer;
-      border: 2px solid rgba(255,255,255,0.15);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-soft);
       transition: opacity 0.2s, transform 0.2s;
     }
 
@@ -219,14 +241,14 @@
       right: -14px;
       width: 32px;
       height: 32px;
-      background: var(--accent);
+      background: rgba(45,212,191,0.92);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.2rem;
       font-weight: 700;
-      color: white;
+      color: #06101f;
       cursor: pointer;
       line-height: 1;
     }
@@ -236,7 +258,7 @@
       display: none;
       position: absolute;
       inset: 0;
-      background: rgba(10, 22, 40, 0.93);
+      background: rgba(7, 18, 38, 0.92);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
       border-radius: var(--radius);
@@ -268,6 +290,8 @@
       background: var(--surface);
       border-radius: var(--radius);
       padding: 12px 16px;
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
     }
 
     .stat-chip {
@@ -294,16 +318,33 @@
     .stats-divider {
       width: 1px;
       height: 30px;
-      background: rgba(255,255,255,0.1);
+      background: var(--border);
       flex-shrink: 0;
     }
 
     .stats-spacer { flex: 1; }
 
+    /* Keep stats row clean on small widths */
+    @media (max-width: 420px) {
+      .stats-row {
+        gap: 8px;
+      }
+
+      .stats-spacer {
+        flex-basis: 100%;
+        height: 0;
+      }
+
+      .stats-row .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
     /* ── Shared button ───────────────────────────────────────────────────── */
     .btn {
-      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-      color: white;
+      background: linear-gradient(135deg, rgba(45,212,191,0.95), rgba(37,99,235,0.95));
+      color: #06101f;
       border: none;
       border-radius: 10px;
       padding: 10px 18px;
@@ -322,8 +363,14 @@
     .pb-row {
       grid-area: pb;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* Prevent min-content overflow from stretching the grid wider */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
+      width: 100%;
+    }
+
+    @media (max-width: 360px) {
+      .pb-row { grid-template-columns: 1fr; }
     }
 
     .pb-card {
@@ -333,6 +380,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      border: 1px solid var(--border);
     }
 
     .pb-icon  { font-size: 1.2rem; flex-shrink: 0; }
@@ -360,6 +408,7 @@
       background: var(--surface);
       border-radius: var(--radius);
       padding: 12px 14px;
+      border: 1px solid var(--border);
     }
 
     .badge-shelf-title {
@@ -387,8 +436,8 @@
       gap: 4px;
       padding: 8px 10px;
       border-radius: 20px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(231,237,247,0.03);
+      border: 1px solid var(--border);
       cursor: pointer;
       filter: grayscale(1) opacity(0.35);
       transition: filter 0.3s;
@@ -399,8 +448,8 @@
 
     .badge-item.earned {
       filter: none;
-      background: rgba(233,69,96,0.1);
-      border-color: rgba(233,69,96,0.3);
+      background: rgba(45,212,191,0.10);
+      border-color: rgba(45,212,191,0.28);
     }
 
     .badge-icon  { font-size: 1.3rem; line-height: 1; }
@@ -420,7 +469,7 @@
       display: none;
       position: fixed;
       background: var(--board-bg);
-      border: 1px solid var(--accent);
+      border: 1px solid rgba(45,212,191,0.35);
       border-radius: 10px;
       padding: 10px 14px;
       font-size: 0.8rem;
@@ -460,7 +509,10 @@
   <!-- ① Header bar: title left, mode toggle right -->
   <header class="header">
     <h1>City Puzzle</h1>
-    <nav class="mode-toggle">
+    <nav class="mode-toggle" aria-label="Puzzle settings">
+      <a href="?source=city&mode=easy" class="mode-btn" id="btn-source-city">City</a>
+      <a href="?source=music&mode=easy" class="mode-btn" id="btn-source-music">Music</a>
+      <span style="width:10px; display:inline-block;"></span>
       <a href="?mode=easy" class="mode-btn" id="btn-easy">Easy</a>
       <a href="?mode=hard" class="mode-btn" id="btn-hard">Hard</a>
     </nav>
@@ -549,11 +601,25 @@
   <script>
     const params = new URLSearchParams(location.search);
     const MODE  = params.get('mode') === 'hard' ? 'hard' : 'easy';
+    const SOURCE = params.get('source') === 'music' ? 'music' : 'city';
     const GRID  = MODE === 'hard' ? 4 : 3;
     const TOTAL = GRID * GRID;
 
     // Activate mode button
     document.getElementById('btn-' + MODE).classList.add('active');
+    document.getElementById('btn-source-' + SOURCE).classList.add('active');
+
+    // Keep toggles consistent across clicks (preserve both params)
+    function setToggleHref(el, next) {
+      const q = new URLSearchParams(location.search);
+      Object.entries(next).forEach(([k, v]) => q.set(k, v));
+      el.href = `?${q.toString()}`;
+    }
+
+    setToggleHref(document.getElementById('btn-source-city'),  { source: 'city' });
+    setToggleHref(document.getElementById('btn-source-music'), { source: 'music' });
+    setToggleHref(document.getElementById('btn-easy'), { mode: 'easy' });
+    setToggleHref(document.getElementById('btn-hard'), { mode: 'hard' });
 
     // Footer date
     document.getElementById('footer-date').textContent =
@@ -751,7 +817,8 @@
           tile.style.backgroundSize     = `${GRID * tileSize}px ${GRID * tileSize}px`;
           tile.style.backgroundPosition = `-${col * tileSize}px -${row * tileSize}px`;
         } else if (val !== 0) {
-          tile.style.background = `hsl(${val * 23}, 50%, 30%)`;
+          // Muted fallback palette (less “rainbow”, still distinct)
+          tile.style.background = `hsl(${(200 + val * 18) % 360}, var(--tile-sat), var(--tile-lit))`;
         }
 
         tile.addEventListener('click', () => handleClick(idx));
@@ -899,9 +966,15 @@
     loadPBDisplay();
     newGame();
 
-    fetch('/api/config')
+    fetch(`/api/config?source=${encodeURIComponent(SOURCE)}`)
       .then(r => r.json())
-      .then(cfg => loadImage(cfg.imageUrl))
+      .then(cfg => {
+        loadImage(cfg.imageUrl);
+        if (cfg && cfg.meta && cfg.meta.source === 'music' && cfg.meta.year) {
+          const label = document.querySelector('.preview-label');
+          if (label) label.textContent = `🎵 ${cfg.meta.year} Reference`;
+        }
+      })
       .catch(() => {
         document.getElementById('loading-msg').textContent =
           'Could not load config — tiles shown as colors.';
