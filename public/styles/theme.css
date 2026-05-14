@@ -1,0 +1,55 @@
+/* Shared design tokens and base styles — used by / and /welcome.html */
+:root {
+  color-scheme: light;
+  --bg:            #f1f5f9;
+  --surface:       #ffffff;
+  --board-bg:      #e2e8f0;
+  --elevated:      #ffffff;
+
+  --accent:        #2563eb;
+  --accent-muted:  #eff6ff;
+  --accent-press:  #1d4ed8;
+
+  --text:          #0f172a;
+  --text-muted:    #64748b;
+  --text-dim:      #475569;
+  --highlight:     #0ea5e9;
+  --empty-tile:    #cbd5e1;
+
+  --border:        #e2e8f0;
+  --border-strong: #cbd5e1;
+  --shadow:        0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-soft:   0 1px 3px rgba(15, 23, 42, 0.08);
+
+  --focus:         rgba(37, 99, 235, 0.35);
+
+  --tile-sat:      42%;
+  --tile-lit:      52%;
+  --board-max:     480px;
+  --gutter:        12px;
+  --radius:        10px;
+  --radius-sm:     8px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

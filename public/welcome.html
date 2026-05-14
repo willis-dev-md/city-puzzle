@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mixed Up — Daily picture puzzle</title>
+  <meta name="description" content="Slide the tiles, beat the clock. Mixed Up is a daily picture puzzle with music and city themes.">
+  <meta property="og:title" content="Mixed Up — Daily picture puzzle">
+  <meta property="og:description" content="Slide the tiles, beat the clock. Play the daily puzzle.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <style>
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px var(--gutter) 48px;
+      max-width: 520px;
+      margin: 0 auto;
+      width: 100%;
+      text-align: center;
+    }
+
+    .welcome-logo-link {
+      display: inline-block;
+      text-decoration: none;
+      color: inherit;
+      margin-bottom: 20px;
+      border-radius: var(--radius);
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .welcome-logo-link:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+
+    .welcome-logo {
+      display: block;
+      width: min(100%, 360px);
+      height: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .welcome h1 {
+      font-size: clamp(1.5rem, 4vw, 1.875rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .welcome-lead {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 28px;
+      max-width: 38ch;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .welcome-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1rem;
+      padding: 12px 28px;
+      border-radius: var(--radius-sm);
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .welcome-cta:hover {
+      background: var(--accent-press);
+    }
+
+    .welcome-cta:active {
+      transform: scale(0.98);
+    }
+
+    .welcome-hint {
+      margin-top: 16px;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .welcome-footer {
+      margin-top: auto;
+      padding: 20px var(--gutter);
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* Phase B: display / programmatic ads — insert network snippet inside .ad-slot__inner after legal review */
+    .ad-region {
+      width: 100%;
+      max-width: 520px;
+      margin: 48px auto 0;
+      padding: 0 var(--gutter);
+    }
+
+    .ad-slot {
+      min-height: 120px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+      padding: 16px;
+    }
+
+    .ad-slot__inner {
+      width: 100%;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="welcome">
+    <a class="welcome-logo-link" href="/" title="Play Mixed Up">
+      <img
+        class="welcome-logo"
+        src="/images/mixedUp_v1.png"
+        alt="Mixed Up"
+        width="704"
+        height="384"
+        decoding="async"
+        fetchpriority="high"
+      >
+    </a>
+    <h1>Mixed Up</h1>
+    <p class="welcome-lead">A quick daily picture puzzle. Slide the tiles, beat your best time, and come back tomorrow for a new image.</p>
+    <a class="welcome-cta" href="/">Play</a>
+    <p class="welcome-hint">Opens the game on this site. Bookmark <strong>/</strong> to jump straight in next time.</p>
+  </main>
+
+  <section class="ad-region" aria-label="Advertisement">
+    <div class="ad-slot" data-ad-slot="welcome-below-fold">
+      <div class="ad-slot__inner">
+        <!-- After privacy policy + network approval: paste ad code here (e.g. AdSense unit). Keep a min-height on .ad-slot to limit CLS. -->
+        <span>Ad placeholder — landing only</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="welcome-footer">
+    <a href="/" style="color: var(--accent); text-decoration: none; font-weight: 500;">Play</a>
+    ·
+    <span>Mixed Up</span>
+  </footer>
+  <script>
+    (function () {
+      var base = location.origin;
+      var og = document.querySelector('meta[property="og:url"]');
+      if (og) og.setAttribute('content', base + location.pathname);
+      var ogi = document.querySelector('meta[property="og:image"]');
+      if (ogi) ogi.setAttribute('content', base + '/images/mixedUp_v1.png');
+    })();
+  </script>
+</body>
+</html>
