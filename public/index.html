@@ -5,38 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mixed Up</title>
   <style>
-    /* ── Theme tokens ───────────────────────────────────────────────────── */
+    /* ── Theme tokens — clean light UI ──────────────────────────────────── */
     :root {
-      /* Neutral, calmer dark theme (better contrast, less neon) */
-      --bg:          #0b1220;
-      --surface:     #0f1a2b;
-      --board-bg:    #0c1f3a;
+      color-scheme: light;
+      --bg:            #f1f5f9;
+      --surface:       #ffffff;
+      --board-bg:      #e2e8f0;
+      --elevated:      #ffffff;
 
-      /* Primary accent (teal → blue) */
-      --accent:      #2dd4bf;
-      --accent-dark: #2563eb;
+      --accent:        #2563eb;
+      --accent-muted:  #eff6ff;
+      --accent-press:  #1d4ed8;
 
-      --text:        #e7edf7;
-      --text-muted:  rgba(231,237,247,0.62);
-      --text-dim:    rgba(231,237,247,0.78);
-      --gold:        #fbbf24;
-      --empty-tile:  #071226;
+      --text:          #0f172a;
+      --text-muted:    #64748b;
+      --text-dim:      #475569;
+      --highlight:     #0ea5e9;
+      --empty-tile:    #cbd5e1;
 
-      /* Surfaces/borders */
-      --border:      rgba(231,237,247,0.12);
-      --border-strong: rgba(231,237,247,0.18);
-      --shadow:      0 8px 28px rgba(0,0,0,0.55);
-      --shadow-soft: 0 2px 10px rgba(0,0,0,0.40);
+      --border:        #e2e8f0;
+      --border-strong: #cbd5e1;
+      --shadow:        0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.06);
+      --shadow-soft:   0 1px 3px rgba(15, 23, 42, 0.08);
 
-      /* Focus ring */
-      --focus:       rgba(45,212,191,0.45);
+      --focus:         rgba(37, 99, 235, 0.35);
 
-      /* Fallback tile palette (when image fails to load) */
-      --tile-sat:    46%;
-      --tile-lit:    34%;
-      --board-max:   480px;
-      --gutter:      12px;
-      --radius:      12px;
+      --tile-sat:      42%;
+      --tile-lit:      52%;
+      --board-max:     480px;
+      --gutter:        12px;
+      --radius:        10px;
+      --radius-sm:     8px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,11 +43,13 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
     :focus-visible {
@@ -61,38 +62,45 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px var(--gutter);
+      padding: 12px var(--gutter);
       background: var(--surface);
-      box-shadow: var(--shadow-soft);
+      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
 
     .header h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--accent), rgba(37,99,235,0.95));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
 
-    .mode-toggle { display: flex; gap: 6px; }
+    .mode-toggle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
     .mode-btn {
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 0.8125rem;
       text-decoration: none;
-      border: 1px solid var(--border-strong);
-      color: var(--accent);
-      background: rgba(231,237,247,0.02);
-      transition: background 0.2s, color 0.2s;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: var(--bg);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
       white-space: nowrap;
       line-height: 1.4;
     }
 
-    .mode-btn.active { background: rgba(45,212,191,0.16); border-color: rgba(45,212,191,0.35); color: var(--text); }
+    .mode-btn:hover {
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    .mode-btn.active {
+      background: var(--accent-muted);
+      border-color: transparent;
+      color: var(--accent);
+    }
 
     /* City source: kept in markup for later; delete this rule to show again */
     #btn-source-city { display: none; }
@@ -143,30 +151,32 @@
 
     #board {
       display: grid;
-      gap: 3px;
+      gap: 4px;
       background: var(--board-bg);
       border-radius: var(--radius);
-      padding: 3px;
+      padding: 4px;
       box-shadow: var(--shadow);
+      border: 1px solid var(--border);
       width: 100%;
     }
 
     .tile {
       aspect-ratio: 1;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: transform 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
     }
 
-    .tile:hover:not(.empty) { transform: scale(1.03); z-index: 1; }
-    .tile:active:not(.empty) { transform: scale(0.97); }
+    .tile:hover:not(.empty) { transform: scale(1.02); z-index: 1; }
+    .tile:active:not(.empty) { transform: scale(0.99); }
 
     .tile.empty {
       background: var(--empty-tile) !important;
       cursor: default;
-      box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
     }
 
     .tile.moving { transition: transform 0.15s ease; }
@@ -183,9 +193,10 @@
     .preview-section.loaded { display: flex; }
 
     .preview-label {
-      font-size: 0.6rem;
+      font-size: 0.6875rem;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
     }
 
@@ -193,15 +204,18 @@
       height: 80px;
       width: auto;
       max-width: 100%;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       object-fit: cover;
       cursor: pointer;
-      border: 1px solid var(--border-strong);
+      border: 1px solid var(--border);
       box-shadow: var(--shadow-soft);
-      transition: opacity 0.2s, transform 0.2s;
+      transition: opacity 0.2s, box-shadow 0.2s;
     }
 
-    .preview-thumb:hover { opacity: 0.85; transform: scale(1.04); }
+    .preview-thumb:hover {
+      opacity: 0.92;
+      box-shadow: var(--shadow);
+    }
 
     @media (min-width: 768px) {
       .preview-section { align-items: stretch; }
@@ -219,7 +233,9 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.88);
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       z-index: 200;
       align-items: center;
       justify-content: center;
@@ -240,20 +256,28 @@
 
     .preview-modal-close {
       position: absolute;
-      top: -14px;
-      right: -14px;
+      top: -12px;
+      right: -12px;
       width: 32px;
       height: 32px;
-      background: rgba(45,212,191,0.92);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #06101f;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-muted);
       cursor: pointer;
       line-height: 1;
+      box-shadow: var(--shadow-soft);
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .preview-modal-close:hover {
+      color: var(--text);
+      background: var(--bg);
     }
 
     /* ── Win overlay (over completed board) ─────────────────────────────── */
@@ -261,9 +285,9 @@
       display: none;
       position: absolute;
       inset: 0;
-      background: rgba(7, 18, 38, 0.58);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       border-radius: var(--radius);
       flex-direction: column;
       align-items: center;
@@ -276,22 +300,23 @@
 
     #win-overlay.show { display: flex; }
 
-    .win-title  { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .win-title  { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
 
-    .win-stats  { font-size: 0.9rem; color: var(--text-dim); }
+    .win-stats  { font-size: 0.875rem; color: var(--text-muted); }
 
-    .win-record { color: var(--gold); font-weight: 600; font-size: 0.85rem; }
+    .win-record { color: var(--accent); font-weight: 500; font-size: 0.8125rem; }
 
     /* ── Live stats row ──────────────────────────────────────────────────── */
     .stats-row {
       grid-area: stats;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       background: var(--surface);
       border-radius: var(--radius);
-      padding: 12px 16px;
+      padding: 14px 16px;
       border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
       flex-wrap: wrap;
     }
 
@@ -303,17 +328,20 @@
     }
 
     .stat-label {
-      font-size: 0.65rem;
+      font-size: 0.625rem;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
     }
 
     .stat-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--accent);
+      font-size: 1.375rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
       line-height: 1.2;
+      letter-spacing: -0.02em;
     }
 
     .stats-divider {
@@ -344,21 +372,21 @@
 
     /* ── Shared button ───────────────────────────────────────────────────── */
     .btn {
-      background: linear-gradient(135deg, rgba(45,212,191,0.95), rgba(37,99,235,0.95));
-      color: #06101f;
+      background: var(--accent);
+      color: #fff;
       border: none;
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       padding: 10px 18px;
-      font-size: 0.9rem;
-      font-weight: 600;
+      font-size: 0.875rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
+      transition: background 0.15s, transform 0.1s;
       white-space: nowrap;
       flex-shrink: 0;
     }
 
-    .btn:hover  { opacity: 0.9; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
+    .btn:hover  { background: var(--accent-press); }
+    .btn:active { transform: scale(0.98); }
 
     /* ── Personal bests row (two cards) ──────────────────────────────────── */
     .pb-row {
@@ -377,30 +405,35 @@
     .pb-card {
       background: var(--surface);
       border-radius: var(--radius);
-      padding: 12px 14px;
+      padding: 14px 16px;
       display: flex;
-      align-items: center;
-      gap: 10px;
+      align-items: flex-start;
+      gap: 0;
       border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
     }
 
-    .pb-icon  { font-size: 1.2rem; flex-shrink: 0; }
+    .pb-card--time  { border-left: 3px solid var(--accent); }
+    .pb-card--moves { border-left: 3px solid var(--highlight); }
 
-    .pb-info  { display: flex; flex-direction: column; min-width: 0; }
+    .pb-info  { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
 
     .pb-label {
-      font-size: 0.65rem;
+      font-size: 0.625rem;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
       white-space: nowrap;
     }
 
     .pb-value {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--accent);
+      font-size: 1.125rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
       white-space: nowrap;
+      letter-spacing: -0.02em;
     }
 
     /* ── Badge shelf (horizontal scroll) ─────────────────────────────────── */
@@ -408,14 +441,16 @@
       grid-area: badges;
       background: var(--surface);
       border-radius: var(--radius);
-      padding: 12px 14px;
+      padding: 14px 16px;
       border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
     }
 
     .badge-shelf-title {
-      font-size: 0.65rem;
+      font-size: 0.625rem;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.08em;
       color: var(--text-muted);
       margin-bottom: 10px;
     }
@@ -434,56 +469,88 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      padding: 8px 10px;
-      border-radius: 20px;
-      background: rgba(231,237,247,0.03);
+      gap: 6px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
       border: 1px solid var(--border);
       cursor: pointer;
-      filter: grayscale(1) opacity(0.35);
-      transition: filter 0.3s;
+      opacity: 0.5;
+      transition: opacity 0.2s, border-color 0.2s, background 0.2s;
       flex-shrink: 0;
-      min-width: 60px;
+      min-width: 64px;
       user-select: none;
     }
 
     .badge-item.earned {
-      filter: none;
-      background: rgba(45,212,191,0.10);
-      border-color: rgba(45,212,191,0.28);
+      opacity: 1;
+      background: var(--accent-muted);
+      border-color: transparent;
     }
 
-    .badge-icon  { font-size: 1.3rem; line-height: 1; }
+    .badge-mark {
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .badge-item.earned .badge-mark {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
 
     .badge-label {
-      font-size: 0.6rem;
-      color: var(--text-dim);
-      font-weight: 600;
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      font-weight: 500;
       text-align: center;
-      white-space: nowrap;
+      line-height: 1.25;
+      max-width: 76px;
     }
 
-    .badge-item.earned .badge-label { color: var(--accent); }
+    .badge-item.earned .badge-label { color: var(--text); }
 
     /* Tap-activated badge tooltip popup */
     #badge-popup {
       display: none;
       position: fixed;
-      background: var(--board-bg);
-      border: 1px solid rgba(45,212,191,0.35);
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 0.8125rem;
       color: var(--text);
       z-index: 300;
-      max-width: 200px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      max-width: 220px;
+      box-shadow: var(--shadow);
       pointer-events: none;
     }
 
     #badge-popup.show { display: block; }
 
-    #badge-popup strong { display: block; color: var(--accent); margin-bottom: 4px; }
+    #badge-popup strong {
+      display: block;
+      color: var(--text);
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.875rem;
+    }
+
+    .badge-popup-desc {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      line-height: 1.4;
+    }
 
     /* ── Loading message ─────────────────────────────────────────────────── */
     #loading-msg {
@@ -497,11 +564,12 @@
     /* ── Footer ──────────────────────────────────────────────────────────── */
     footer {
       text-align: center;
-      padding: 12px var(--gutter);
-      font-size: 0.7rem;
+      padding: 16px var(--gutter);
+      font-size: 0.75rem;
       color: var(--text-muted);
-      opacity: 0.55;
       flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
     }
   </style>
 </head>
@@ -537,7 +605,7 @@
 
     <!-- ② b Reference thumbnail — tap to expand -->
     <div id="preview" class="preview-section">
-      <span class="preview-label">👁 Reference</span>
+      <span class="preview-label">Reference</span>
       <img id="preview-thumb" class="preview-thumb" alt="Reference image" />
     </div>
 
@@ -558,17 +626,15 @@
 
     <!-- ④ Personal bests: two side-by-side cards -->
     <div class="pb-row">
-      <div class="pb-card">
-        <span class="pb-icon">⏱</span>
+      <div class="pb-card pb-card--time">
         <div class="pb-info">
-          <span class="pb-label">Best Time</span>
+          <span class="pb-label">Best time</span>
           <span class="pb-value" id="pb-time-display">--</span>
         </div>
       </div>
-      <div class="pb-card">
-        <span class="pb-icon">🎯</span>
+      <div class="pb-card pb-card--moves">
         <div class="pb-info">
-          <span class="pb-label">Best Moves</span>
+          <span class="pb-label">Best moves</span>
           <span class="pb-value" id="pb-moves-display">--</span>
         </div>
       </div>
@@ -642,10 +708,10 @@
 
     // ── Badges ────────────────────────────────────────────────────────────
     const BADGES = [
-      { id: 'speed_demon',  label: 'Speed Demon',  desc: 'Complete in under 60 seconds', icon: '⚡', earned: false },
-      { id: 'efficient',    label: 'Efficient',     desc: 'Complete in under 30 moves',   icon: '🎯', earned: false },
-      { id: 'first_solve',  label: 'First Solve',   desc: 'Complete your first puzzle',   icon: '🏆', earned: false },
-      { id: 'daily_player', label: 'Daily Player',  desc: 'Play 7 days in a row',         icon: '📅', earned: false },
+      { id: 'speed_demon',  abbr: 'SD', label: 'Speed Demon',  desc: 'Finish in under 60 seconds.', earned: false },
+      { id: 'efficient',    abbr: 'EF', label: 'Efficient',     desc: 'Finish in under 30 moves.', earned: false },
+      { id: 'first_solve',  abbr: '1×', label: 'First solve',   desc: 'Complete a puzzle once.', earned: false },
+      { id: 'daily_player', abbr: '7d', label: 'Daily player',  desc: 'Play on 7 consecutive days.', earned: false },
     ];
 
     function loadEarnedBadges() {
@@ -665,13 +731,14 @@
 
     function showBadgePopup(badge, anchorEl) {
       clearTimeout(badgePopupTimer);
-      badgePopup.innerHTML = `<strong>${badge.icon} ${badge.label}</strong>${badge.desc}`;
+      badgePopup.innerHTML =
+        `<strong>${badge.label}</strong><span class="badge-popup-desc">${badge.desc}</span>`;
       badgePopup.classList.add('show');
 
       // Measure after making visible
       const rect    = anchorEl.getBoundingClientRect();
       const popH    = badgePopup.offsetHeight;
-      const popW    = 200;
+      const popW    = 220;
       let left = rect.left + rect.width / 2 - popW / 2;
       let top  = rect.top - popH - 8;
 
@@ -693,7 +760,7 @@
         const el = document.createElement('div');
         el.className = 'badge-item' + (badge.earned ? ' earned' : '');
         el.innerHTML =
-          `<span class="badge-icon">${badge.icon}</span>` +
+          `<span class="badge-mark">${badge.abbr}</span>` +
           `<span class="badge-label">${badge.label}</span>`;
         el.addEventListener('click', () => showBadgePopup(badge, el));
         tray.appendChild(el);
@@ -730,7 +797,7 @@
       document.getElementById('pb-moves-display').textContent = pbMoves ? pbMoves : '--';
     }
 
-    // Returns array of record strings e.g. ['🎉 New best time!']
+    // Returns array of record strings e.g. ['New best time']
     function checkAndSavePBs(elapsedSecs, moveCount) {
       const records = [];
       const pbTime  = getCookie('pb_time');
@@ -739,13 +806,13 @@
       if (pbTime === null || elapsedSecs < parseInt(pbTime, 10)) {
         setCookie('pb_time', elapsedSecs, 365);
         document.getElementById('pb-time-display').textContent = formatTime(elapsedSecs);
-        if (pbTime !== null) records.push('🎉 New best time!');
+        if (pbTime !== null) records.push('New best time');
       }
 
       if (pbMoves === null || moveCount < parseInt(pbMoves, 10)) {
         setCookie('pb_moves', moveCount, 365);
         document.getElementById('pb-moves-display').textContent = moveCount;
-        if (pbMoves !== null) records.push('🎯 New best moves!');
+        if (pbMoves !== null) records.push('New best moves');
       }
 
       return records;
@@ -899,9 +966,9 @@
       const records = checkAndSavePBs(secs, moves);
 
       const newBadges = [];
-      if (awardBadge('first_solve'))               newBadges.push('🏆 First Solve!');
-      if (secs  < 60  && awardBadge('speed_demon')) newBadges.push('⚡ Speed Demon!');
-      if (moves < 30  && awardBadge('efficient'))   newBadges.push('🎯 Efficient!');
+      if (awardBadge('first_solve'))               newBadges.push('First solve');
+      if (secs  < 60  && awardBadge('speed_demon')) newBadges.push('Speed Demon');
+      if (moves < 30  && awardBadge('efficient'))   newBadges.push('Efficient');
 
       document.getElementById('win-stats').textContent = `${moves} moves · ${elapsedStr()}`;
 
@@ -977,7 +1044,7 @@
         loadImage(cfg.imageUrl);
         if (cfg && cfg.meta && cfg.meta.source === 'music' && cfg.meta.year) {
           const label = document.querySelector('.preview-label');
-          if (label) label.textContent = `🎵 ${cfg.meta.year} Reference`;
+          if (label) label.textContent = `Music · ${cfg.meta.year} · Reference`;
         }
       })
       .catch(() => {
