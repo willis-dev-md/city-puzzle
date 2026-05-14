@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const { getConfig, generateSolvable, isSolved, isSolvable, resolveImageUrl } = require('./lib/puzzle');
-const { createSpotifyClient } = require('./lib/spotify');
+const { createSpotifyClient, getDailyAlbumCover, spotifyImageCache } = require('./lib/spotify');
 const app = require('./server');
 
 // ── Grid dimensions ───────────────────────────────────────────────────────────
@@ -84,6 +84,13 @@ test('GET /api/config defaults to city source and returns meta', async () => {
 });
 
 test('GET /api/config?source=music returns fallback meta when spotify not configured', async () => {
+  // Temporarily clear credentials so we reliably hit the "not configured" branch,
+  // regardless of what is in .env.
+  const savedId = process.env.SPOTIFY_CLIENT_ID;
+  const savedSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  delete process.env.SPOTIFY_CLIENT_ID;
+  delete process.env.SPOTIFY_CLIENT_SECRET;
+
   const server = await listen(app);
   try {
     const port = server.address().port;
@@ -93,6 +100,8 @@ test('GET /api/config?source=music returns fallback meta when spotify not config
     assert.equal(json.meta.fallback, 'city');
     assert.ok(json.meta.error);
   } finally {
+    if (savedId !== undefined) process.env.SPOTIFY_CLIENT_ID = savedId;
+    if (savedSecret !== undefined) process.env.SPOTIFY_CLIENT_SECRET = savedSecret;
     await new Promise(r => server.close(r));
   }
 });
@@ -147,6 +156,74 @@ test('hard mode: generated tiles are not already solved', () => {
   const { grid } = getConfig('hard');
   const tiles = generateSolvable(grid);
   assert.equal(isSolved(tiles), false);
+});
+
+// ── Spotify album-cover caching ───────────────────────────────────────────────
+
+test('getDailyAlbumCover: cache hit returns stored result without calling Spotify', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const cached = { imageUrl: 'https://i.scdn.co/image/cached.jpg', meta: { source: 'music', year: 1999 } };
+  spotifyImageCache.result = cached;
+  spotifyImageCache.date = today;
+
+  let clientCalled = false;
+  const sentinelClient = new Proxy({}, {
+    get: () => async () => { clientCalled = true; return []; },
+  });
+
+  try {
+    const result = await getDailyAlbumCover({ client: sentinelClient });
+    assert.equal(result, cached, 'should return the cached object by reference');
+    assert.equal(clientCalled, false, 'Spotify client must not be called on a cache hit');
+  } finally {
+    spotifyImageCache.result = null;
+    spotifyImageCache.date = null;
+  }
+});
+
+test('getDailyAlbumCover: cache miss fetches fresh result and stores it', async () => {
+  // Simulate stale cache from a previous day
+  spotifyImageCache.result = { imageUrl: 'https://old.jpg', meta: {} };
+  spotifyImageCache.date = '2000-01-01';
+
+  const freshUrl = 'https://i.scdn.co/image/fresh.jpg';
+  const mockFetch = async (url) => {
+    const u = String(url);
+    if (u.includes('accounts.spotify.com')) {
+      return { ok: true, json: async () => ({ access_token: 'tok', expires_in: 3600 }) };
+    }
+    if (u.includes('type=track')) {
+      return {
+        ok: true,
+        json: async () => ({
+          tracks: {
+            items: [{
+              album: {
+                images: [{ url: freshUrl, width: 300 }],
+                name: 'Fresh Album',
+                artists: [{ name: 'Fresh Artist' }],
+              },
+            }],
+          },
+        }),
+      };
+    }
+    // playlist searches — return empty so code falls through to track fallback
+    return { ok: true, json: async () => ({ playlists: { items: [] } }) };
+  };
+
+  const client = createSpotifyClient({ clientId: 'id', clientSecret: 'secret', fetchImpl: mockFetch });
+
+  try {
+    const result = await getDailyAlbumCover({ client });
+    const today = new Date().toISOString().slice(0, 10);
+    assert.equal(result.imageUrl, freshUrl, 'should return the freshly fetched URL');
+    assert.equal(spotifyImageCache.date, today, 'cache date should be updated to today');
+    assert.equal(spotifyImageCache.result?.imageUrl, freshUrl, 'cache should store the fresh result');
+  } finally {
+    spotifyImageCache.result = null;
+    spotifyImageCache.date = null;
+  }
 });
 
 // ── Spotify token caching (mocked) ────────────────────────────────────────────

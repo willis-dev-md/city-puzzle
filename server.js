@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { resolveImageUrl } = require('./lib/puzzle');
-const { createSpotifyClient, randomYear, getRandomAlbumCoverFromYear } = require('./lib/spotify');
+const { createSpotifyClient, getDailyAlbumCover, spotifyImageCache } = require('./lib/spotify');
 
 const app = express();
 const PORT = 3000;
@@ -35,13 +35,22 @@ app.get('/api/config', (req, res) => {
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
       });
 
-      const year = randomYear({
-        minYear: process.env.MUSIC_MIN_YEAR,
-        maxYear: process.env.MUSIC_MAX_YEAR,
-      });
+      const result = await getDailyAlbumCover({ client });
 
-      const { imageUrl, meta } = await getRandomAlbumCoverFromYear({ client, year });
-      res.json({ imageUrl, meta });
+      if (result && result.imageUrl) {
+        res.json(result);
+        return;
+      }
+
+      const imageUrl = getDailyImageUrl();
+      res.json({
+        imageUrl,
+        meta: {
+          source: 'music',
+          fallback: 'city',
+          error: 'Cache not ready',
+        },
+      });
     } catch (err) {
       const imageUrl = getDailyImageUrl();
       res.json({
@@ -57,10 +66,20 @@ app.get('/api/config', (req, res) => {
 });
 
 app.get('/api/cache-status', (req, res) => {
-  const imageUrl = getDailyImageUrl();
-  const d = new Date();
-  const date = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
-  res.json({ strategy: 'date-seeded', imageUrl, date });
+  const now = new Date();
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  const msUntilExpiry = midnight - now;
+  res.json({
+    city: {
+      strategy: 'date-seeded',
+      imageUrl: getDailyImageUrl(),
+    },
+    music: {
+      cachedDate: spotifyImageCache.date,
+      cachedUrl: spotifyImageCache.result?.imageUrl ?? null,
+      msUntilExpiry: spotifyImageCache.date ? msUntilExpiry : null,
+    },
+  });
 });
 
 if (require.main === module) {
