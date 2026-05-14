@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>City Puzzle</title>
+  <title>Mixed Up</title>
   <style>
     /* ── Theme tokens ───────────────────────────────────────────────────── */
     :root {
@@ -93,6 +93,9 @@
     }
 
     .mode-btn.active { background: rgba(45,212,191,0.16); border-color: rgba(45,212,191,0.35); color: var(--text); }
+
+    /* City source: kept in markup for later; delete this rule to show again */
+    #btn-source-city { display: none; }
 
     /* ── Main grid — mobile-first, single column ────────────────────────── */
     .main {
@@ -258,9 +261,9 @@
       display: none;
       position: absolute;
       inset: 0;
-      background: rgba(7, 18, 38, 0.92);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      background: rgba(7, 18, 38, 0.58);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
       border-radius: var(--radius);
       flex-direction: column;
       align-items: center;
@@ -272,8 +275,6 @@
     }
 
     #win-overlay.show { display: flex; }
-
-    .win-emoji  { font-size: 3rem; }
 
     .win-title  { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
 
@@ -508,9 +509,9 @@
 
   <!-- ① Header bar: title left, mode toggle right -->
   <header class="header">
-    <h1>City Puzzle</h1>
+    <h1>Mixed Up</h1>
     <nav class="mode-toggle" aria-label="Puzzle settings">
-      <a href="?source=city&mode=easy" class="mode-btn" id="btn-source-city">City</a>
+      <a href="?source=city&mode=easy" class="mode-btn" id="btn-source-city" aria-hidden="true" tabindex="-1">City</a>
       <a href="?source=music&mode=easy" class="mode-btn" id="btn-source-music">Music</a>
       <span style="width:10px; display:inline-block;"></span>
       <a href="?mode=easy" class="mode-btn" id="btn-easy">Easy</a>
@@ -526,7 +527,6 @@
         <div id="board"></div>
         <!-- Win modal over the board -->
         <div id="win-overlay">
-          <div class="win-emoji">🎉</div>
           <div class="win-title">Puzzle Solved!</div>
           <div class="win-stats" id="win-stats"></div>
           <div id="win-records"></div>
@@ -596,12 +596,12 @@
   <div id="badge-popup"></div>
 
   <!-- ⑥ Footer -->
-  <footer>Daily City Puzzle · <span id="footer-date"></span></footer>
+  <footer>Mixed Up Daily  · <span id="footer-date"></span></footer>
 
   <script>
     const params = new URLSearchParams(location.search);
     const MODE  = params.get('mode') === 'hard' ? 'hard' : 'easy';
-    const SOURCE = params.get('source') === 'music' ? 'music' : 'city';
+    const SOURCE = params.get('source') === 'city' ? 'city' : 'music';
     const GRID  = MODE === 'hard' ? 4 : 3;
     const TOTAL = GRID * GRID;
 
@@ -807,18 +807,21 @@
 
       tiles.forEach((val, idx) => {
         const tile = document.createElement('div');
-        tile.className = 'tile' + (val === 0 ? ' empty' : '');
+        // Solved: show every image slice (incl. piece 0); in play, 0 stays the empty slot.
+        const piece   = solved ? idx : val;
+        const isEmpty = !solved && val === 0;
+        tile.className = 'tile' + (isEmpty ? ' empty' : '');
         tile.dataset.idx = idx;
 
-        if (val !== 0 && imageLoaded) {
-          const col = val % GRID;
-          const row = Math.floor(val / GRID);
+        if (!isEmpty && imageLoaded) {
+          const col = piece % GRID;
+          const row = Math.floor(piece / GRID);
           tile.style.backgroundImage    = `url('${IMAGE_URL}')`;
           tile.style.backgroundSize     = `${GRID * tileSize}px ${GRID * tileSize}px`;
           tile.style.backgroundPosition = `-${col * tileSize}px -${row * tileSize}px`;
-        } else if (val !== 0) {
+        } else if (!isEmpty) {
           // Muted fallback palette (less “rainbow”, still distinct)
-          tile.style.background = `hsl(${(200 + val * 18) % 360}, var(--tile-sat), var(--tile-lit))`;
+          tile.style.background = `hsl(${(200 + piece * 18) % 360}, var(--tile-sat), var(--tile-lit))`;
         }
 
         tile.addEventListener('click', () => handleClick(idx));
@@ -855,9 +858,11 @@
 
       if (startTime === null) startTimer();
 
+      const nowSolved = isSolved(tiles);
+      if (nowSolved) solved = true;
       render();
 
-      if (isSolved(tiles)) winGame();
+      if (nowSolved) winGame();
     }
 
     // ── Timer ─────────────────────────────────────────────────────────────
