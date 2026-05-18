@@ -4,106 +4,191 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mixed Up</title>
+  <link rel="stylesheet" href="/styles/theme.css">
   <style>
-    /* ── Theme tokens — clean light UI ──────────────────────────────────── */
-    :root {
-      color-scheme: light;
-      --bg:            #f1f5f9;
-      --surface:       #ffffff;
-      --board-bg:      #e2e8f0;
-      --elevated:      #ffffff;
-
-      --accent:        #2563eb;
-      --accent-muted:  #eff6ff;
-      --accent-press:  #1d4ed8;
-
-      --text:          #0f172a;
-      --text-muted:    #64748b;
-      --text-dim:      #475569;
-      --highlight:     #0ea5e9;
-      --empty-tile:    #cbd5e1;
-
-      --border:        #e2e8f0;
-      --border-strong: #cbd5e1;
-      --shadow:        0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.06);
-      --shadow-soft:   0 1px 3px rgba(15, 23, 42, 0.08);
-
-      --focus:         rgba(37, 99, 235, 0.35);
-
-      --tile-sat:      42%;
-      --tile-lit:      52%;
-      --board-max:     480px;
-      --gutter:        12px;
-      --radius:        10px;
-      --radius-sm:     8px;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      font-size: 15px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    :focus-visible {
-      outline: 2px solid var(--focus);
-      outline-offset: 2px;
-    }
-
     /* ── Header ─────────────────────────────────────────────────────────── */
     .header {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
+      gap: 8px;
       padding: 12px var(--gutter);
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
 
-    .header h1 {
-      font-size: 1.125rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
+    .header-left {
+      justify-self: start;
+    }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      justify-self: center;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .site-title {
+      font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      margin: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 0.08em;
+    }
+
+    .site-title-main {
       color: var(--text);
     }
 
-    .mode-toggle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .site-title-accent {
+      background: linear-gradient(135deg, var(--accent) 0%, #0ea5e9 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
 
+    .header-right {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+    }
+
+    .help-btn,
+    .info-btn,
     .mode-btn {
-      padding: 6px 14px;
+      font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 600;
+      font-size: 0.6875rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      min-width: 30px;
+      height: 30px;
+      padding: 0 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 999px;
-      font-weight: 500;
-      font-size: 0.8125rem;
-      text-decoration: none;
       border: 1px solid var(--border);
       color: var(--text-muted);
       background: var(--bg);
+      cursor: pointer;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
+      line-height: 1;
       white-space: nowrap;
-      line-height: 1.4;
     }
 
+    .mode-btn {
+      text-decoration: none;
+    }
+
+    .help-btn {
+      font-weight: 700;
+      font-size: 1.0625rem;
+      letter-spacing: 0;
+      text-transform: none;
+      width: 30px;
+      padding: 0;
+      border-radius: 50%;
+      color: var(--text);
+    }
+
+    .help-btn:hover,
+    .info-btn:hover,
     .mode-btn:hover {
       color: var(--text);
       border-color: var(--border-strong);
     }
 
     .mode-btn.active {
-      background: var(--accent-muted);
-      border-color: transparent;
-      color: var(--accent);
+      color: var(--text);
+      border-color: var(--border-strong);
+      background: var(--bg);
     }
 
-    /* City source: kept in markup for later; delete this rule to show again */
-    #btn-source-city { display: none; }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    #board.daily-locked .tile {
+      pointer-events: none;
+      cursor: default;
+    }
+
+    .daily-lock-msg {
+      grid-area: loading;
+      text-align: center;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      background: var(--accent-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      line-height: 1.45;
+    }
+
+    .mode-toggle { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    /* Source toggles: kept in markup for later; delete these rules to show again */
+    #btn-source-city,
+    #btn-source-music { display: none; }
+
+    /* ── Three-column shell (side ads + main on desktop) ─────────────────── */
+    .app-shell {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      justify-content: center;
+    }
+
+    .ad-rail {
+      display: none;
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 320px;
+      padding: 24px 16px;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .ad-rail-inner {
+      position: sticky;
+      top: 24px;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .app-main {
+      flex: 0 1 820px;
+      width: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    @media (min-width: 768px) {
+      .ad-rail {
+        display: flex;
+      }
+
+      /* Side rails carry desktop ads; hide the in-column ad slot while playing */
+      .sidebar-slot .ad-slot-section {
+        display: none;
+      }
+    }
 
     /* ── Main grid — mobile-first, single column ────────────────────────── */
     .main {
@@ -113,13 +198,18 @@
       gap: 10px;
       grid-template-columns: minmax(0, var(--board-max));
       grid-template-areas:
+        "album"
         "board"
+        "win"
         "preview"
         "stats"
-        "pb"
-        "badges"
+        "ad"
         "loading";
       justify-content: center;
+      flex: 1;
+    }
+
+    .app-main .main {
       flex: 1;
     }
 
@@ -129,16 +219,14 @@
         grid-template-columns: minmax(0, var(--board-max)) minmax(0, 260px);
         grid-template-rows: auto auto auto auto 1fr auto;
         grid-template-areas:
+          "album album"
           "board preview"
-          "board stats"
-          "board pb"
-          "board badges"
-          "board ."
-          "board loading";
+          "win stats"
+          ". ad"
+          "loading loading";
         column-gap: 24px;
         row-gap: 14px;
         padding: 24px;
-        max-width: 820px;
         margin: 0 auto;
         align-items: start;
       }
@@ -148,6 +236,248 @@
     .board-section { grid-area: board; }
 
     .board-wrapper { position: relative; width: 100%; }
+
+    .board-solved {
+      display: none;
+      width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      vertical-align: top;
+    }
+
+    .board-wrapper.is-solved #board { display: none; }
+    .board-wrapper.is-solved .board-solved { display: block; }
+
+    /* ── Album details (above board; scroll up after solving) ───────────── */
+    .album-panel {
+      grid-area: album;
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+      gap: 16px;
+    }
+
+    .album-panel.show {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      align-items: start;
+    }
+
+    .album-panel-cover {
+      width: 88px;
+      height: 88px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .album-panel-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .album-panel-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .album-panel-kicker {
+      font-size: 0.625rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .album-panel-title {
+      font-size: 1.0625rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+    }
+
+    .album-panel-artist {
+      font-size: 0.9375rem;
+      color: var(--text-dim);
+    }
+
+    .album-panel-meta {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 360px) {
+      .album-panel.show {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .album-panel-cover {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+      }
+    }
+
+    /* ── Win banner (below board — image stays visible) ─────────────────── */
+    .win-banner {
+      grid-area: win;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .win-banner.show { display: flex; }
+
+    .win-title  { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+
+    .win-stats  { font-size: 0.875rem; color: var(--text-muted); }
+
+    .win-record { color: var(--accent); font-weight: 500; font-size: 0.8125rem; }
+
+    /* ── Help modal ─────────────────────────────────────────────────────── */
+    .help-modal,
+    .info-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 250;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .help-modal.show,
+    .info-modal.show { display: flex; }
+
+    .help-modal-panel,
+    .info-modal-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      max-width: 420px;
+      width: 100%;
+      max-height: min(85vh, 520px);
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+
+    .help-modal-panel h2,
+    .info-modal-panel h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+      padding-right: 28px;
+    }
+
+    .info-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .info-stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .info-stat dt {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 0;
+    }
+
+    .info-stat dd {
+      font-size: 1.125rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      text-align: right;
+    }
+
+    .info-daily-status {
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .info-cookie-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .help-modal-panel ol {
+      margin: 0 0 16px 1.15rem;
+      color: var(--text-dim);
+      font-size: 0.9375rem;
+      line-height: 1.55;
+    }
+
+    .help-modal-panel li + li { margin-top: 8px; }
+
+    .help-modal-panel p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .help-modal-close,
+    .info-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .help-modal-close:hover,
+    .info-modal-close:hover { color: var(--text); }
 
     #board {
       display: grid;
@@ -190,7 +520,9 @@
       gap: 4px;
     }
 
-    .preview-section.loaded { display: flex; }
+    .preview-section.loaded:not([hidden]) { display: flex; }
+
+    .preview-section[hidden] { display: none !important; }
 
     .preview-label {
       font-size: 0.6875rem;
@@ -201,9 +533,9 @@
     }
 
     .preview-thumb {
+      width: 80px;
       height: 80px;
-      width: auto;
-      max-width: 100%;
+      aspect-ratio: 1;
       border-radius: var(--radius-sm);
       object-fit: cover;
       cursor: pointer;
@@ -220,9 +552,9 @@
     @media (min-width: 768px) {
       .preview-section { align-items: stretch; }
       .preview-thumb {
-        height: auto;
         width: 100%;
-        max-height: 160px;
+        height: auto;
+        aspect-ratio: 1;
         border-radius: var(--radius);
         object-fit: cover;
       }
@@ -280,37 +612,12 @@
       background: var(--bg);
     }
 
-    /* ── Win overlay (over completed board) ─────────────────────────────── */
-    #win-overlay {
-      display: none;
-      position: absolute;
-      inset: 0;
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      border-radius: var(--radius);
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      text-align: center;
-      padding: 20px;
-      z-index: 10;
-    }
-
-    #win-overlay.show { display: flex; }
-
-    .win-title  { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
-
-    .win-stats  { font-size: 0.875rem; color: var(--text-muted); }
-
-    .win-record { color: var(--accent); font-weight: 500; font-size: 0.8125rem; }
-
     /* ── Live stats row ──────────────────────────────────────────────────── */
     .stats-row {
       grid-area: stats;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 12px;
       background: var(--surface);
       border-radius: var(--radius);
@@ -351,25 +658,6 @@
       flex-shrink: 0;
     }
 
-    .stats-spacer { flex: 1; }
-
-    /* Keep stats row clean on small widths */
-    @media (max-width: 420px) {
-      .stats-row {
-        gap: 8px;
-      }
-
-      .stats-spacer {
-        flex-basis: 100%;
-        height: 0;
-      }
-
-      .stats-row .btn {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-
     /* ── Shared button ───────────────────────────────────────────────────── */
     .btn {
       background: var(--accent);
@@ -388,57 +676,12 @@
     .btn:hover  { background: var(--accent-press); }
     .btn:active { transform: scale(0.98); }
 
-    /* ── Personal bests row (two cards) ──────────────────────────────────── */
-    .pb-row {
-      grid-area: pb;
-      display: grid;
-      /* Prevent min-content overflow from stretching the grid wider */
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      width: 100%;
+    /* ── In-column ad slot ───────────────────────────────────────────────── */
+    .sidebar-slot {
+      grid-area: ad;
     }
 
-    @media (max-width: 360px) {
-      .pb-row { grid-template-columns: 1fr; }
-    }
-
-    .pb-card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      display: flex;
-      align-items: flex-start;
-      gap: 0;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .pb-card--time  { border-left: 3px solid var(--accent); }
-    .pb-card--moves { border-left: 3px solid var(--highlight); }
-
-    .pb-info  { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
-
-    .pb-label {
-      font-size: 0.625rem;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
-
-    .pb-value {
-      font-size: 1.125rem;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-      color: var(--text);
-      white-space: nowrap;
-      letter-spacing: -0.02em;
-    }
-
-    /* ── Badge shelf (horizontal scroll) ─────────────────────────────────── */
-    .badge-section {
-      grid-area: badges;
+    .ad-slot-section {
       background: var(--surface);
       border-radius: var(--radius);
       padding: 14px 16px;
@@ -446,7 +689,11 @@
       box-shadow: var(--shadow-soft);
     }
 
-    .badge-shelf-title {
+    .ad-rail .ad-slot-inner {
+      min-height: 600px;
+    }
+
+    .ad-slot-label {
       font-size: 0.625rem;
       font-weight: 500;
       text-transform: uppercase;
@@ -455,101 +702,18 @@
       margin-bottom: 10px;
     }
 
-    .badge-tray {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      scrollbar-width: none;
-    }
-
-    .badge-tray::-webkit-scrollbar { display: none; }
-
-    .badge-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 12px;
+    .ad-slot-inner {
+      min-height: 90px;
+      border: 1px dashed var(--border-strong);
       border-radius: var(--radius-sm);
       background: var(--bg);
-      border: 1px solid var(--border);
-      cursor: pointer;
-      opacity: 0.5;
-      transition: opacity 0.2s, border-color 0.2s, background 0.2s;
-      flex-shrink: 0;
-      min-width: 64px;
-      user-select: none;
-    }
-
-    .badge-item.earned {
-      opacity: 1;
-      background: var(--accent-muted);
-      border-color: transparent;
-    }
-
-    .badge-mark {
-      font-size: 0.625rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--surface);
-      border: 1px solid var(--border);
       color: var(--text-muted);
-    }
-
-    .badge-item.earned .badge-mark {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    .badge-label {
-      font-size: 0.625rem;
-      color: var(--text-muted);
-      font-weight: 500;
+      font-size: 0.75rem;
       text-align: center;
-      line-height: 1.25;
-      max-width: 76px;
-    }
-
-    .badge-item.earned .badge-label { color: var(--text); }
-
-    /* Tap-activated badge tooltip popup */
-    #badge-popup {
-      display: none;
-      position: fixed;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      font-size: 0.8125rem;
-      color: var(--text);
-      z-index: 300;
-      max-width: 220px;
-      box-shadow: var(--shadow);
-      pointer-events: none;
-    }
-
-    #badge-popup.show { display: block; }
-
-    #badge-popup strong {
-      display: block;
-      color: var(--text);
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 0.875rem;
-    }
-
-    .badge-popup-desc {
-      color: var(--text-muted);
-      font-size: 0.8125rem;
-      line-height: 1.4;
+      padding: 16px;
     }
 
     /* ── Loading message ─────────────────────────────────────────────────── */
@@ -571,36 +735,86 @@
       border-top: 1px solid var(--border);
       background: var(--surface);
     }
+
+    @media (max-width: 520px) {
+      .header {
+        gap: 6px;
+        padding: 10px var(--gutter);
+      }
+
+      .site-title {
+        font-size: 1.25rem;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <!-- ① Header bar: title left, mode toggle right -->
+  <div class="app-shell">
+
+    <aside class="ad-rail ad-rail--left" aria-label="Advertisement">
+      <div class="ad-rail-inner">
+        <div class="ad-slot-section">
+          <div class="ad-slot-label">Advertisement</div>
+          <div class="ad-slot-inner" data-ad-slot="rail-left">
+            <!-- Google AdSense (left rail) after approval -->
+            <span>Ad placeholder</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+
+  <!-- Header: modes left, title + help centered -->
   <header class="header">
-    <h1>Mixed Up</h1>
-    <nav class="mode-toggle" aria-label="Puzzle settings">
+    <nav class="mode-toggle header-left" aria-label="Puzzle settings">
       <a href="?source=city&mode=easy" class="mode-btn" id="btn-source-city" aria-hidden="true" tabindex="-1">City</a>
-      <a href="?source=music&mode=easy" class="mode-btn" id="btn-source-music">Music</a>
-      <span style="width:10px; display:inline-block;"></span>
+      <a href="?source=music&mode=easy" class="mode-btn" id="btn-source-music" aria-hidden="true" tabindex="-1">Music</a>
       <a href="?mode=easy" class="mode-btn" id="btn-easy">Easy</a>
       <a href="?mode=hard" class="mode-btn" id="btn-hard">Hard</a>
     </nav>
+    <div class="header-center">
+      <h1 class="site-title">
+        <span class="site-title-main">Mixed</span><span class="site-title-accent">Up</span>
+      </h1>
+    </div>
+    <div class="header-right">
+      <div class="header-actions">
+        <button type="button" class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        <button type="button" class="info-btn" id="info-btn">Info</button>
+      </div>
+    </div>
   </header>
 
   <main class="main">
 
+    <!-- Album details — revealed on solve; scroll up to read -->
+    <section id="album-panel" class="album-panel" aria-label="Album details" hidden>
+      <div class="album-panel-cover">
+        <img id="album-panel-img" src="" alt="">
+      </div>
+      <div class="album-panel-info">
+        <span class="album-panel-kicker" id="album-panel-kicker">Today&apos;s album</span>
+        <h2 class="album-panel-title" id="album-panel-title"></h2>
+        <p class="album-panel-artist" id="album-panel-artist"></p>
+        <p class="album-panel-meta" id="album-panel-meta"></p>
+      </div>
+    </section>
+
     <!-- ② Hero: puzzle board -->
     <div class="board-section">
-      <div class="board-wrapper">
+      <div class="board-wrapper" id="board-wrapper">
         <div id="board"></div>
-        <!-- Win modal over the board -->
-        <div id="win-overlay">
-          <div class="win-title">Puzzle Solved!</div>
-          <div class="win-stats" id="win-stats"></div>
-          <div id="win-records"></div>
-          <button class="btn" onclick="newGame()" style="margin-top:8px">Play Again</button>
-        </div>
+        <img id="board-solved" class="board-solved" alt="Completed puzzle" hidden>
       </div>
+    </div>
+
+    <!-- Win summary below the board (image stays visible) -->
+    <div id="win-banner" class="win-banner">
+      <div class="win-title">Puzzle solved</div>
+      <div class="win-stats" id="win-stats"></div>
+      <div id="win-records"></div>
     </div>
 
     <!-- ② b Reference thumbnail — tap to expand -->
@@ -609,7 +823,7 @@
       <img id="preview-thumb" class="preview-thumb" alt="Reference image" />
     </div>
 
-    <!-- ③ Live stats row: Moves | Time | — | New Game -->
+    <!-- Live stats: moves and time -->
     <div class="stats-row">
       <div class="stat-chip">
         <span class="stat-label">Moves</span>
@@ -620,35 +834,41 @@
         <span class="stat-label">Time</span>
         <span class="stat-value" id="timer">0:00</span>
       </div>
-      <div class="stats-spacer"></div>
-      <button class="btn" id="new-game-btn">New Game</button>
     </div>
 
-    <!-- ④ Personal bests: two side-by-side cards -->
-    <div class="pb-row">
-      <div class="pb-card pb-card--time">
-        <div class="pb-info">
-          <span class="pb-label">Best time</span>
-          <span class="pb-value" id="pb-time-display">--</span>
+    <!-- In-column ad (mobile; hidden on desktop when side rails show) -->
+    <div class="sidebar-slot">
+      <aside id="ad-slot-game" class="ad-slot-section" aria-label="Advertisement">
+        <div class="ad-slot-label">Advertisement</div>
+        <div class="ad-slot-inner" data-ad-slot="game-below-fold">
+          <!-- After privacy policy + network approval: paste Google AdSense code here. -->
+          <span>Ad placeholder</span>
         </div>
-      </div>
-      <div class="pb-card pb-card--moves">
-        <div class="pb-info">
-          <span class="pb-label">Best moves</span>
-          <span class="pb-value" id="pb-moves-display">--</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⑤ Badge shelf (horizontally scrollable) -->
-    <div class="badge-section">
-      <div class="badge-shelf-title">Badges</div>
-      <div class="badge-tray" id="badge-tray"></div>
+      </aside>
     </div>
 
     <p id="loading-msg">Loading image...</p>
-
+    <p id="daily-lock-msg" class="daily-lock-msg" hidden>You&apos;ve completed today&apos;s puzzle. Come back tomorrow for a new one.</p>
   </main>
+
+  <!-- Footer -->
+  <footer>Mixed Up Daily  · <span id="footer-date"></span></footer>
+
+    </div><!-- /.app-main -->
+
+    <aside class="ad-rail ad-rail--right" aria-label="Advertisement">
+      <div class="ad-rail-inner">
+        <div class="ad-slot-section">
+          <div class="ad-slot-label">Advertisement</div>
+          <div class="ad-slot-inner" data-ad-slot="rail-right">
+            <!-- Google AdSense (right rail) after approval -->
+            <span>Ad placeholder</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /.app-shell -->
 
   <!-- Preview full-size modal (toggled by thumbnail tap) -->
   <div class="preview-modal" id="preview-modal">
@@ -658,11 +878,50 @@
     </div>
   </div>
 
-  <!-- Badge tooltip popup (tap-activated) -->
-  <div id="badge-popup"></div>
+  <!-- How to play -->
+  <div class="help-modal" id="help-modal" role="dialog" aria-labelledby="help-modal-title" aria-modal="true">
+    <div class="help-modal-panel">
+      <button type="button" class="help-modal-close" id="help-modal-close" aria-label="Close">×</button>
+      <h2 id="help-modal-title">How to play</h2>
+      <ol>
+        <li>Tap a tile next to the empty space to slide it into the gap.</li>
+        <li>Keep sliding until the picture is restored — every piece in the right place.</li>
+        <li>Your move count and timer start on your first move.</li>
+        <li>Use <strong>Easy</strong> (3×3) or <strong>Hard</strong> (4×4) to change difficulty.</li>
+        <li>Music mode uses a new album cover each day. After you solve it, scroll up for album details.</li>
+        <li>You can play once per day. Check <strong>Info</strong> for your stats.</li>
+      </ol>
+      <p>The reference thumbnail below the board shows the full image if you need a hint.</p>
+    </div>
+  </div>
 
-  <!-- ⑥ Footer -->
-  <footer>Mixed Up Daily  · <span id="footer-date"></span></footer>
+  <!-- Play stats -->
+  <div class="info-modal" id="info-modal" role="dialog" aria-labelledby="info-modal-title" aria-modal="true">
+    <div class="info-modal-panel">
+      <button type="button" class="info-modal-close" id="info-modal-close" aria-label="Close">×</button>
+      <h2 id="info-modal-title">Your stats</h2>
+      <dl class="info-stats">
+        <div class="info-stat">
+          <dt>Games played</dt>
+          <dd id="info-total-plays">0</dd>
+        </div>
+        <div class="info-stat">
+          <dt>Day streak</dt>
+          <dd id="info-streak">0</dd>
+        </div>
+        <div class="info-stat">
+          <dt>Fastest time</dt>
+          <dd id="info-best-time">--</dd>
+        </div>
+        <div class="info-stat">
+          <dt>Least moves</dt>
+          <dd id="info-least-moves">--</dd>
+        </div>
+      </dl>
+      <p class="info-daily-status" id="info-daily-status"></p>
+      <p class="info-cookie-note">Stats are saved in cookies on this device. A cookie preferences option will be added here later.</p>
+    </div>
+  </div>
 
   <script>
     const params = new URLSearchParams(location.search);
@@ -694,6 +953,82 @@
       });
 
     const boardEl = document.getElementById('board');
+    const boardWrapper = document.getElementById('board-wrapper');
+    const boardSolvedImg = document.getElementById('board-solved');
+    const winBanner = document.getElementById('win-banner');
+    const albumPanel = document.getElementById('album-panel');
+    let PUZZLE_META = null;
+
+    function applyAlbumPanelContent(meta) {
+      if (!meta) return false;
+
+      const kicker  = document.getElementById('album-panel-kicker');
+      const title   = document.getElementById('album-panel-title');
+      const artist  = document.getElementById('album-panel-artist');
+      const metaEl  = document.getElementById('album-panel-meta');
+      const cover   = document.getElementById('album-panel-img');
+
+      if (meta.source === 'music' && (meta.albumName || meta.artistName || meta.year)) {
+        kicker.textContent = meta.year ? `Album · ${meta.year}` : "Today's album";
+        title.textContent  = meta.albumName || 'Unknown album';
+        artist.textContent = meta.artistName || '';
+        const parts = [];
+        if (meta.playlistName) parts.push(`From playlist “${meta.playlistName}”`);
+        if (meta.year) parts.push(`Featured year: ${meta.year}`);
+        metaEl.textContent = parts.join(' · ');
+        cover.src = IMAGE_URL;
+        cover.alt = meta.albumName ? `${meta.albumName} cover` : 'Album cover';
+        return true;
+      }
+
+      if (meta.source === 'city') {
+        kicker.textContent = "Today's puzzle";
+        title.textContent  = 'Daily image';
+        artist.textContent = '';
+        metaEl.textContent = meta.dateSeed
+          ? `New picture every day · ${meta.dateSeed}`
+          : 'New picture every day';
+        cover.src = IMAGE_URL;
+        cover.alt = 'Daily puzzle image';
+        return true;
+      }
+
+      return false;
+    }
+
+    function showAlbumPanel() {
+      if (!applyAlbumPanelContent(PUZZLE_META)) return;
+      albumPanel.hidden = false;
+      albumPanel.classList.add('show');
+    }
+
+    function hideAlbumPanel() {
+      albumPanel.hidden = true;
+      albumPanel.classList.remove('show');
+    }
+
+    function showSolvedBoard() {
+      if (!IMAGE_URL) return;
+      boardSolvedImg.src = IMAGE_URL;
+      boardSolvedImg.hidden = false;
+      boardWrapper.classList.add('is-solved');
+    }
+
+    function hideSolvedBoard() {
+      boardSolvedImg.hidden = true;
+      boardWrapper.classList.remove('is-solved');
+    }
+
+    const previewSection = document.getElementById('preview');
+
+    function hidePreviewSection() {
+      previewSection.hidden = true;
+      document.getElementById('preview-modal').classList.remove('show');
+    }
+
+    function showPreviewSection() {
+      if (imageLoaded && !solved) previewSection.hidden = false;
+    }
 
     // ── Cookie helpers ────────────────────────────────────────────────────
     function setCookie(name, value, days) {
@@ -706,7 +1041,104 @@
       return match ? decodeURIComponent(match.split('=')[1]) : null;
     }
 
-    // ── Badges ────────────────────────────────────────────────────────────
+    // ── Daily play stats (cookies) ────────────────────────────────────────
+    function getTodayUtc() {
+      const d = new Date();
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    }
+
+    function getYesterdayUtc() {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - 1);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    }
+
+    function getPlayStats() {
+      return {
+        totalPlays: parseInt(getCookie('mu_total_plays') || '0', 10) || 0,
+        streak: parseInt(getCookie('mu_streak') || '0', 10) || 0,
+        lastWinDate: getCookie('mu_last_win_date'),
+      };
+    }
+
+    function isDailyLocked() {
+      return getCookie('mu_last_win_date') === getTodayUtc();
+    }
+
+    function recordWinForDailyStats(secs, moveCount) {
+      const today = getTodayUtc();
+      const lastWin = getCookie('mu_last_win_date');
+      if (lastWin === today) return;
+
+      const total = (parseInt(getCookie('mu_total_plays') || '0', 10) || 0) + 1;
+      setCookie('mu_total_plays', total, 365);
+      setCookie('mu_last_win_date', today, 365);
+      setCookie('mu_last_win_moves', moveCount, 365);
+      setCookie('mu_last_win_secs', secs, 365);
+
+      const lastStreakDay = getCookie('mu_last_streak_date');
+      const yesterday = getYesterdayUtc();
+      let streak = parseInt(getCookie('mu_streak') || '0', 10) || 0;
+
+      if (lastStreakDay === yesterday) streak += 1;
+      else streak = 1;
+
+      setCookie('mu_streak', streak, 365);
+      setCookie('mu_last_streak_date', today, 365);
+
+      if (streak >= 7) awardBadge('daily_player');
+    }
+
+    function refreshInfoModal() {
+      const stats = getPlayStats();
+      document.getElementById('info-total-plays').textContent = stats.totalPlays;
+      document.getElementById('info-streak').textContent = stats.streak;
+
+      const pbTime  = getCookie('pb_time');
+      const pbMoves = getCookie('pb_moves');
+      document.getElementById('info-best-time').textContent =
+        pbTime ? formatTime(parseInt(pbTime, 10)) : '--';
+      document.getElementById('info-least-moves').textContent = pbMoves ? pbMoves : '--';
+
+      const statusEl = document.getElementById('info-daily-status');
+      if (isDailyLocked()) {
+        statusEl.textContent = "Well done you've finished today's puzzle. One game per day — come back tomorrow for the next one.";
+      } else {
+        statusEl.textContent = "Today's puzzle is ready. You get one play per day.";
+      }
+    }
+
+    function applyDailyLockUI() {
+      const locked = isDailyLocked();
+      boardEl.classList.toggle('daily-locked', locked);
+      document.getElementById('daily-lock-msg').hidden = !locked;
+      document.getElementById('btn-easy').style.pointerEvents = locked ? 'none' : '';
+      document.getElementById('btn-hard').style.pointerEvents = locked ? 'none' : '';
+      document.getElementById('btn-easy').style.opacity = locked ? '0.45' : '';
+      document.getElementById('btn-hard').style.opacity = locked ? '0.45' : '';
+    }
+
+    function restoreDailyCompleteState() {
+      if (!isDailyLocked()) return false;
+
+      solved = true;
+      const moves = getCookie('mu_last_win_moves');
+      const secs  = getCookie('mu_last_win_secs');
+      if (moves != null) document.getElementById('move-count').textContent = moves;
+      if (secs != null) {
+        document.getElementById('timer').textContent = formatTime(parseInt(secs, 10));
+        document.getElementById('win-stats').textContent =
+          `${moves || '—'} moves · ${formatTime(parseInt(secs, 10))}`;
+      }
+      showSolvedBoard();
+      showAlbumPanel();
+      winBanner.classList.add('show');
+      hidePreviewSection();
+      applyDailyLockUI();
+      return true;
+    }
+
+    // ── Badges (cookie tracking only; win-banner highlights) ────────────────
     const BADGES = [
       { id: 'speed_demon',  abbr: 'SD', label: 'Speed Demon',  desc: 'Finish in under 60 seconds.', earned: false },
       { id: 'efficient',    abbr: 'EF', label: 'Efficient',     desc: 'Finish in under 30 moves.', earned: false },
@@ -726,62 +1158,15 @@
       setCookie('earned_badges', ids, 365);
     }
 
-    const badgePopup = document.getElementById('badge-popup');
-    let badgePopupTimer = null;
-
-    function showBadgePopup(badge, anchorEl) {
-      clearTimeout(badgePopupTimer);
-      badgePopup.innerHTML =
-        `<strong>${badge.label}</strong><span class="badge-popup-desc">${badge.desc}</span>`;
-      badgePopup.classList.add('show');
-
-      // Measure after making visible
-      const rect    = anchorEl.getBoundingClientRect();
-      const popH    = badgePopup.offsetHeight;
-      const popW    = 220;
-      let left = rect.left + rect.width / 2 - popW / 2;
-      let top  = rect.top - popH - 8;
-
-      // Clamp horizontally
-      left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
-      // Flip below if off top edge
-      if (top < 8) top = rect.bottom + 8;
-
-      badgePopup.style.left = left + 'px';
-      badgePopup.style.top  = top  + 'px';
-
-      badgePopupTimer = setTimeout(() => badgePopup.classList.remove('show'), 3000);
-    }
-
-    function renderBadges() {
-      const tray = document.getElementById('badge-tray');
-      tray.innerHTML = '';
-      BADGES.forEach(badge => {
-        const el = document.createElement('div');
-        el.className = 'badge-item' + (badge.earned ? ' earned' : '');
-        el.innerHTML =
-          `<span class="badge-mark">${badge.abbr}</span>` +
-          `<span class="badge-label">${badge.label}</span>`;
-        el.addEventListener('click', () => showBadgePopup(badge, el));
-        tray.appendChild(el);
-      });
-    }
-
     function awardBadge(id) {
       const badge = BADGES.find(b => b.id === id);
       if (badge && !badge.earned) {
         badge.earned = true;
         saveEarnedBadges();
-        renderBadges();
         return true;
       }
       return false;
     }
-
-    // Dismiss badge popup on outside tap
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.badge-item')) badgePopup.classList.remove('show');
-    });
 
     // ── Personal Bests ────────────────────────────────────────────────────
     function formatTime(secs) {
@@ -790,14 +1175,6 @@
       return `${m}:${s}`;
     }
 
-    function loadPBDisplay() {
-      const pbTime  = getCookie('pb_time');
-      const pbMoves = getCookie('pb_moves');
-      document.getElementById('pb-time-display').textContent  = pbTime  ? formatTime(parseInt(pbTime, 10)) : '--';
-      document.getElementById('pb-moves-display').textContent = pbMoves ? pbMoves : '--';
-    }
-
-    // Returns array of record strings e.g. ['New best time']
     function checkAndSavePBs(elapsedSecs, moveCount) {
       const records = [];
       const pbTime  = getCookie('pb_time');
@@ -805,13 +1182,11 @@
 
       if (pbTime === null || elapsedSecs < parseInt(pbTime, 10)) {
         setCookie('pb_time', elapsedSecs, 365);
-        document.getElementById('pb-time-display').textContent = formatTime(elapsedSecs);
         if (pbTime !== null) records.push('New best time');
       }
 
       if (pbMoves === null || moveCount < parseInt(pbMoves, 10)) {
         setCookie('pb_moves', moveCount, 365);
-        document.getElementById('pb-moves-display').textContent = moveCount;
         if (pbMoves !== null) records.push('New best moves');
       }
 
@@ -914,7 +1289,7 @@
     }
 
     function handleClick(idx) {
-      if (solved) return;
+      if (solved || isDailyLocked()) return;
       const movable = getMovable();
       if (!movable.includes(idx)) return;
 
@@ -964,6 +1339,7 @@
 
       const secs    = elapsedSecs();
       const records = checkAndSavePBs(secs, moves);
+      recordWinForDailyStats(secs, moves);
 
       const newBadges = [];
       if (awardBadge('first_solve'))               newBadges.push('First solve');
@@ -977,11 +1353,16 @@
         .map(msg => `<div class="win-record">${msg}</div>`)
         .join('');
 
-      document.getElementById('win-overlay').classList.add('show');
+      showSolvedBoard();
+      showAlbumPanel();
+      winBanner.classList.add('show');
+      hidePreviewSection();
+      applyDailyLockUI();
     }
 
     // ── New game ──────────────────────────────────────────────────────────
     function newGame() {
+      if (isDailyLocked()) return;
       stopTimer();
       tiles    = generateSolvable();
       emptyIdx = tiles.indexOf(0);
@@ -990,8 +1371,11 @@
       solved   = false;
       document.getElementById('move-count').textContent = '0';
       document.getElementById('timer').textContent      = '0:00';
-      document.getElementById('win-overlay').classList.remove('show');
+      winBanner.classList.remove('show');
       document.getElementById('win-records').innerHTML = '';
+      hideSolvedBoard();
+      hideAlbumPanel();
+      showPreviewSection();
       render();
     }
 
@@ -1009,6 +1393,53 @@
       if (e.target === previewModal) previewModal.classList.remove('show');
     });
 
+    // ── Help modal ────────────────────────────────────────────────────────
+    const helpModal = document.getElementById('help-modal');
+    const helpBtn = document.getElementById('help-btn');
+    const helpClose = document.getElementById('help-modal-close');
+
+    function openHelp() {
+      helpModal.classList.add('show');
+      helpClose.focus();
+    }
+
+    function closeHelp() {
+      helpModal.classList.remove('show');
+      helpBtn.focus();
+    }
+
+    helpBtn.addEventListener('click', openHelp);
+    helpClose.addEventListener('click', closeHelp);
+    helpModal.addEventListener('click', e => {
+      if (e.target === helpModal) closeHelp();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && helpModal.classList.contains('show')) closeHelp();
+      if (e.key === 'Escape' && infoModal.classList.contains('show')) closeInfo();
+    });
+
+    // ── Info modal ────────────────────────────────────────────────────────
+    const infoModal = document.getElementById('info-modal');
+    const infoBtn = document.getElementById('info-btn');
+    const infoClose = document.getElementById('info-modal-close');
+
+    function openInfo() {
+      refreshInfoModal();
+      infoModal.classList.add('show');
+      infoClose.focus();
+    }
+
+    function closeInfo() {
+      infoModal.classList.remove('show');
+      infoBtn.focus();
+    }
+
+    infoBtn.addEventListener('click', openInfo);
+    infoClose.addEventListener('click', closeInfo);
+    infoModal.addEventListener('click', e => {
+      if (e.target === infoModal) closeInfo();
+    });
+
     // ── Image loading ─────────────────────────────────────────────────────
     function loadImage(url) {
       IMAGE_URL = url;
@@ -1019,7 +1450,11 @@
         imageLoaded = true;
         document.getElementById('preview').classList.add('loaded');
         document.getElementById('loading-msg').textContent = '';
-        render();
+        if (isDailyLocked()) restoreDailyCompleteState();
+        else {
+          showPreviewSection();
+          render();
+        }
       };
       img.onerror = () => {
         document.getElementById('loading-msg').textContent =
@@ -1031,20 +1466,18 @@
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────
-    document.getElementById('new-game-btn').addEventListener('click', newGame);
-
     loadEarnedBadges();
-    renderBadges();
-    loadPBDisplay();
-    newGame();
+    if (!isDailyLocked()) newGame();
+    applyDailyLockUI();
 
     fetch(`/api/config?source=${encodeURIComponent(SOURCE)}`)
       .then(r => r.json())
       .then(cfg => {
+        PUZZLE_META = cfg && cfg.meta ? cfg.meta : null;
         loadImage(cfg.imageUrl);
         if (cfg && cfg.meta && cfg.meta.source === 'music' && cfg.meta.year) {
           const label = document.querySelector('.preview-label');
-          if (label) label.textContent = `Music · ${cfg.meta.year} · Reference`;
+          if (label) label.textContent = `${cfg.meta.year} · Reference`;
         }
       })
       .catch(() => {

@@ -14,6 +14,7 @@ function getDailyImageUrl() {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/config', (req, res) => {
+  res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
   const source = (req.query.source || 'city').toString().toLowerCase();
 
   if (source !== 'music') {
@@ -66,6 +67,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.get('/api/cache-status', (req, res) => {
+  res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate');
   const now = new Date();
   const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
   const msUntilExpiry = midnight - now;
