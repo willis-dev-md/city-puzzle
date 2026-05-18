@@ -131,6 +131,10 @@
       align-items: center;
       justify-content: center;
     }
+
+    .ad-slot__inner:has(.adsbygoogle) {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -155,8 +159,14 @@
   <section class="ad-region" aria-label="Advertisement">
     <div class="ad-slot" data-ad-slot="welcome-below-fold">
       <div class="ad-slot__inner">
-        <!-- AdSense unit: data-ad-client="ca-pub-5577845770177327" + your unit data-ad-slot -->
-        <span>Ad placeholder — landing only</span>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5577845770177327"
+             crossorigin="anonymous"></script>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-5577845770177327"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
       </div>
     </div>
   </section>
