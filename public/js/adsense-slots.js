@@ -61,9 +61,7 @@
     host.appendChild(createIns(config));
     host.setAttribute('data-adsense-mounted', 'true');
 
-    if (window.adsbygoogle) {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    }
+    (window.adsbygoogle = window.adsbygoogle || []).push({});
     return true;
   }
 
