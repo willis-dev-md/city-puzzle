@@ -716,6 +716,13 @@
       padding: 16px;
     }
 
+    .ad-slot-inner:has(.adsbygoogle) {
+      border: none;
+      background: transparent;
+      display: block;
+      padding: 0;
+    }
+
     /* ── Loading message ─────────────────────────────────────────────────── */
     #loading-msg {
       grid-area: loading;
@@ -757,8 +764,14 @@
         <div class="ad-slot-section">
           <div class="ad-slot-label">Advertisement</div>
           <div class="ad-slot-inner" data-ad-slot="rail-left">
-            <!-- AdSense unit: data-ad-client="ca-pub-5577845770177327" + your unit data-ad-slot -->
-            <span>Ad placeholder</span>
+            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5577845770177327"
+                 crossorigin="anonymous"></script>
+            <ins class="adsbygoogle"
+                 style="display:inline-block;width:300px;height:600px"
+                 data-ad-client="ca-pub-5577845770177327"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
           </div>
         </div>
       </div>
@@ -841,8 +854,12 @@
       <aside id="ad-slot-game" class="ad-slot-section" aria-label="Advertisement">
         <div class="ad-slot-label">Advertisement</div>
         <div class="ad-slot-inner" data-ad-slot="game-below-fold">
-          <!-- AdSense unit: data-ad-client="ca-pub-5577845770177327" + your unit data-ad-slot -->
-          <span>Ad placeholder</span>
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-5577845770177327"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
         </div>
       </aside>
     </div>
@@ -861,8 +878,12 @@
         <div class="ad-slot-section">
           <div class="ad-slot-label">Advertisement</div>
           <div class="ad-slot-inner" data-ad-slot="rail-right">
-            <!-- AdSense unit: data-ad-client="ca-pub-5577845770177327" + your unit data-ad-slot -->
-            <span>Ad placeholder</span>
+            <ins class="adsbygoogle"
+                 style="display:inline-block;width:300px;height:600px"
+                 data-ad-client="ca-pub-5577845770177327"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
           </div>
         </div>
       </div>
