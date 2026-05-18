@@ -4,51 +4,82 @@
     'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + CLIENT;
   var DESKTOP = window.matchMedia('(min-width: 768px)');
 
-  function slotKey(ins) {
-    var host = ins.closest('[data-ad-slot]');
-    return host ? host.getAttribute('data-ad-slot') : null;
+  var SLOT_CONFIG = {
+    'rail-left': {
+      style: 'display:inline-block;width:300px;height:600px',
+      responsive: false,
+    },
+    'rail-right': {
+      style: 'display:inline-block;width:300px;height:600px',
+      responsive: false,
+    },
+    'game-below-fold': {
+      style: 'display:block',
+      responsive: true,
+    },
+    'welcome-below-fold': {
+      style: 'display:block',
+      responsive: true,
+    },
+  };
+
+  function slotHost(key) {
+    var el = document.querySelector('[data-ad-slot="' + key + '"]');
+    if (!el) return null;
+    if (el.classList.contains('ad-slot-inner') || el.classList.contains('ad-slot__inner')) {
+      return el;
+    }
+    return el.querySelector('.ad-slot-inner, .ad-slot__inner') || el;
   }
 
-  function slotAllowed(key) {
-    if (key === 'game-below-fold') return !DESKTOP.matches;
-    if (key === 'rail-left' || key === 'rail-right') return DESKTOP.matches;
+  function activeSlotKeys() {
+    if (document.querySelector('[data-ad-slot="welcome-below-fold"]')) {
+      return ['welcome-below-fold'];
+    }
+    if (DESKTOP.matches) return ['rail-left', 'rail-right'];
+    return ['game-below-fold'];
+  }
+
+  function createIns(config) {
+    var ins = document.createElement('ins');
+    ins.className = 'adsbygoogle';
+    ins.style.cssText = config.style;
+    ins.setAttribute('data-ad-client', CLIENT);
+    if (config.responsive) {
+      ins.setAttribute('data-ad-format', 'auto');
+      ins.setAttribute('data-full-width-responsive', 'true');
+    }
+    return ins;
+  }
+
+  function mountSlot(key) {
+    var host = slotHost(key);
+    var config = SLOT_CONFIG[key];
+    if (!host || !config || host.getAttribute('data-adsense-mounted') === 'true') return false;
+    if (host.getBoundingClientRect().width <= 0) return false;
+
+    host.appendChild(createIns(config));
+    host.setAttribute('data-adsense-mounted', 'true');
+
+    if (window.adsbygoogle) {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    }
     return true;
   }
 
-  function isVisible(ins) {
-    if (!ins || ins.getAttribute('data-adsense-init') === 'true') return false;
-    if (!slotAllowed(slotKey(ins))) return false;
-
-    var node = ins;
-    while (node && node !== document.body) {
-      var style = window.getComputedStyle(node);
-      if (style.display === 'none' || style.visibility === 'hidden') return false;
-      node = node.parentElement;
-    }
-
-    return ins.getBoundingClientRect().width > 0;
-  }
-
-  function slots() {
-    return Array.prototype.slice.call(
-      document.querySelectorAll('.ad-slot-inner .adsbygoogle, .ad-slot__inner .adsbygoogle')
-    );
-  }
-
-  function pushVisible() {
-    if (!window.adsbygoogle) return;
-    slots().forEach(function (ins) {
-      if (!isVisible(ins)) return;
-      ins.setAttribute('data-adsense-init', 'true');
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    });
+  function mountActiveSlots() {
+    activeSlotKeys().forEach(mountSlot);
   }
 
   function loadScript(done) {
+    if (window.adsbygoogle) {
+      done();
+      return;
+    }
+
     var existing = document.querySelector('script[src*="adsbygoogle.js"]');
     if (existing) {
-      if (window.adsbygoogle) done();
-      else existing.addEventListener('load', done, { once: true });
+      existing.addEventListener('load', done, { once: true });
       return;
     }
 
@@ -57,27 +88,44 @@
     script.src = SCRIPT_SRC;
     script.crossOrigin = 'anonymous';
     script.addEventListener('load', done, { once: true });
-
-    var anchor = document.querySelector('.ad-slot-inner, .ad-slot__inner');
-    (anchor || document.body).appendChild(script);
+    document.body.appendChild(script);
   }
 
-  function init() {
-    if (!slots().length) return;
+  function init(retry) {
+    if (!document.querySelector('[data-ad-slot]')) return;
+
     loadScript(function () {
-      requestAnimationFrame(pushVisible);
+      requestAnimationFrame(function () {
+        mountActiveSlots();
+
+        var keys = activeSlotKeys();
+        var pending = keys.some(function (key) {
+          var host = slotHost(key);
+          return host && host.getAttribute('data-adsense-mounted') !== 'true';
+        });
+
+        if (pending && retry < 8) {
+          setTimeout(function () {
+            init(retry + 1);
+          }, 250);
+        }
+      });
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () {
+      init(0);
+    });
   } else {
-    init();
+    init(0);
   }
 
   var resizeTimer;
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(pushVisible, 200);
+    resizeTimer = setTimeout(function () {
+      if (window.adsbygoogle) mountActiveSlots();
+    }, 200);
   });
 })();
