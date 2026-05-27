@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>House Details — UK Street Crime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #060a10; }
+    select option { background: #0a1020; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const DEFAULT_LOCATION = {
+      street: "Carr Road",
+      town: "Calverley, Leeds",
+      postcode: "LS28 5QR",
+    };
+
+    function getInitialFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        street: params.get('street')?.trim() || DEFAULT_LOCATION.street,
+        town: params.get('town')?.trim() || DEFAULT_LOCATION.town,
+        postcode: params.get('postcode')?.trim() || DEFAULT_LOCATION.postcode,
+        autoFetch:
+          params.get('fetch') === '1' ||
+          Boolean(
+            params.get('street')?.trim() ||
+            params.get('town')?.trim() ||
+            params.get('postcode')?.trim()
+          ),
+      };
+    }
+
+    const STATIC_DATA_NOTE = "Data sourced from data.police.uk · Locations approximate · 1 mile search radius";
+
+    const CATEGORY_COLORS = {
+      "anti-social-behaviour": "#f59e0b",
+      "bicycle-theft": "#06b6d4",
+      "burglary": "#ef4444",
+      "criminal-damage-arson": "#f97316",
+      "drugs": "#8b5cf6",
+      "other-crime": "#6b7280",
+      "other-theft": "#64748b",
+      "possession-of-weapons": "#dc2626",
+      "public-order": "#eab308",
+      "robbery": "#b91c1c",
+      "shoplifting": "#0ea5e9",
+      "theft-from-the-person": "#0284c7",
+      "vehicle-crime": "#7c3aed",
+      "violent-crime": "#be123c",
+    };
+
+    function color(cat) { return CATEGORY_COLORS[cat] || "#94a3b8"; }
+    function fmtCat(cat) {
+      return (cat || "unknown").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    }
+    function fmtMonth(m) {
+      if (!m) return "";
+      const [y, mo] = m.split("-");
+      return new Date(+y, +mo - 1, 1).toLocaleString("en-GB", { month: "short", year: "numeric" });
+    }
+
+    function getLast18Months() {
+      const opts = [];
+      const now = new Date();
+      for (let i = 2; i <= 19; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        opts.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      }
+      return opts;
+    }
+
+    const MONTHS = getLast18Months();
+
+    function formatLocationLabel(street, town, postcode) {
+      return [street, town, postcode].map(s => s.trim()).filter(Boolean).join(", ");
+    }
+
+    async function geocodeLocation(street, town, postcode) {
+      const st = street.trim();
+      const tn = town.trim();
+      const pc = postcode.trim().replace(/\s+/g, " ");
+
+      if (!pc && !st && !tn) {
+        throw new Error("Enter a postcode, or a street and town.");
+      }
+
+      if (st || tn) {
+        const params = new URLSearchParams({
+          format: "json",
+          country: "United Kingdom",
+          limit: "1",
+        });
+        if (st) params.set("street", st);
+        if (tn) params.set("city", tn);
+        if (pc) params.set("postalcode", pc);
+
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+        if (!r.ok) throw new Error("Geocoding service unavailable.");
+        const data = await r.json();
+        if (data.length > 0) {
+          const hit = data[0];
+          return {
+            lat: parseFloat(hit.lat),
+            lng: parseFloat(hit.lon),
+            label: formatLocationLabel(st, tn, pc) || hit.display_name.split(", United Kingdom")[0],
+          };
+        }
+      }
+
+      if (pc) {
+        const r = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(pc.replace(/\s+/g, ""))}`);
+        const data = await r.json();
+        if (data.status === 200 && data.result) {
+          const p = data.result;
+          return {
+            lat: p.latitude,
+            lng: p.longitude,
+            label: formatLocationLabel(st, tn, p.postcode) || p.postcode,
+          };
+        }
+        throw new Error("Postcode not found. Check and try again.");
+      }
+
+      throw new Error("Location not found. Check street, town and postcode.");
+    }
+
+    async function getPoliceUrl(lat, lng) {
+      try {
+        const r = await fetch(`https://data.police.uk/api/locate-neighbourhood?q=${lat},${lng}`);
+        const d = await r.json();
+        if (d.force) {
+          return `https://www.police.uk/pu/your-area/${d.force}-police/?tab=crime-map`;
+        }
+      } catch {}
+      return "https://www.police.uk/pu/your-area/?tab=crime-map";
+    }
+
+    async function fetchMonthFromPolice(lat, lng, month, onStatus) {
+      onStatus("Fetching from data.police.uk...");
+      const url = `https://data.police.uk/api/crimes-street/all-crime?lat=${lat}&lng=${lng}&date=${month}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`Police API returned ${r.status}`);
+      const data = await r.json();
+      if (!Array.isArray(data)) return [];
+      return data.map(c => ({
+        category: c.category,
+        month: c.month || month,
+        street: c.location?.street?.name || "Unknown location",
+        outcome: c.outcome_status?.category || null,
+        id: c.id,
+      }));
+    }
+
+    function App() {
+      const initial = getInitialFromUrl();
+      const [street, setStreet] = useState(initial.street);
+      const [town, setTown] = useState(initial.town);
+      const [postcode, setPostcode] = useState(initial.postcode);
+      const [location, setLocation] = useState(null);
+      const [policeUrl, setPoliceUrl] = useState("https://www.police.uk/pu/your-area/?tab=crime-map");
+      const [fromM, setFromM] = useState(MONTHS[2]);
+      const [toM, setToM] = useState(MONTHS[0]);
+      const [crimes, setCrimes] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [fetched, setFetched] = useState(false);
+      const [progress, setProgress] = useState({ done: 0, total: 0, status: "" });
+      const [filterCat, setFilterCat] = useState("all");
+      const [sortBy, setSortBy] = useState("month");
+      const [expanded, setExpanded] = useState(null);
+      const autoFetchDone = useRef(false);
+
+      async function load() {
+        setLoading(true);
+        setError(null);
+        setFetched(false);
+        setCrimes([]);
+        setExpanded(null);
+
+        const fi = MONTHS.indexOf(fromM), ti = MONTHS.indexOf(toM);
+        const [s, e] = fi <= ti ? [fi, ti] : [ti, fi];
+        const range = MONTHS.slice(s, e + 1);
+
+        if (range.length > 12) {
+          setError("Please select a range of 12 months or fewer.");
+          setLoading(false);
+          return;
+        }
+
+        setProgress({ done: 0, total: range.length, status: "Looking up location…" });
+
+        let coords;
+        try {
+          coords = await geocodeLocation(street, town, postcode);
+          setLocation(coords);
+          const url = await getPoliceUrl(coords.lat, coords.lng);
+          setPoliceUrl(url);
+        } catch (err) {
+          setError(err.message || "Could not find that location.");
+          setLoading(false);
+          return;
+        }
+
+        setProgress({ done: 0, total: range.length, status: "" });
+        const all = [];
+
+        for (let i = 0; i < range.length; i++) {
+          const m = range[i];
+          setProgress({ done: i, total: range.length, status: `Fetching ${fmtMonth(m)}…` });
+          try {
+            const res = await fetchMonthFromPolice(coords.lat, coords.lng, m, s => setProgress(p => ({ ...p, status: `${fmtMonth(m)}: ${s}` })));
+            all.push(...res);
+          } catch (err) {
+            console.warn(`Month ${m} failed:`, err);
+            setError(err.message || "Failed to fetch crime data.");
+            setLoading(false);
+            return;
+          }
+          setProgress({ done: i + 1, total: range.length, status: "" });
+        }
+
+        setCrimes(all);
+        setFetched(true);
+        setLoading(false);
+      }
+
+      useEffect(() => {
+        if (autoFetchDone.current || !initial.autoFetch) return;
+        if (!street.trim() && !town.trim() && !postcode.trim()) return;
+        autoFetchDone.current = true;
+        load();
+      }, []);
+
+      const cats = [...new Set(crimes.map(c => c.category))].sort();
+      const shown = filterCat === "all" ? crimes : crimes.filter(c => c.category === filterCat);
+      const catCounts = shown.reduce((a, c) => { a[c.category] = (a[c.category] || 0) + 1; return a; }, {});
+      const topCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+      const moCounts = shown.reduce((a, c) => { a[c.month] = (a[c.month] || 0) + 1; return a; }, {});
+      const moTrend = Object.entries(moCounts).sort((a, b) => a[0].localeCompare(b[0]));
+      const maxMo = Math.max(...moTrend.map(m => m[1]), 1);
+      const sorted = [...shown].sort((a, b) => {
+        if (sortBy === "month") return (b.month || "").localeCompare(a.month || "");
+        if (sortBy === "category") return (a.category || "").localeCompare(b.category || "");
+        return (a.street || "").localeCompare(b.street || "");
+      });
+
+      const sel = { background: "#0a1020", border: "1px solid #1e3a5f", color: "#c0d4e8", padding: "7px 9px", borderRadius: "5px", fontSize: "12px", cursor: "pointer", fontFamily: "inherit", width: "100%" };
+      const inp = { ...sel, cursor: "text" };
+      const locationLabel = location?.label || formatLocationLabel(street, town, postcode) || "Enter a location below";
+
+      return (
+        <div style={{ fontFamily: "'DM Mono','Courier New',monospace", background: "#060a10", minHeight: "100vh", color: "#e2e8f0" }}>
+          <div style={{ background: "linear-gradient(135deg,#0a1628 0%,#0d2040 100%)", borderBottom: "1px solid #1a3050", padding: "20px 24px 16px" }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
+              <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 6px #3b82f6" }} />
+              <span style={{ fontSize: "9px", letterSpacing: "3px", color: "#2a4a6a", textTransform: "uppercase" }}>data.police.uk · UK crime search</span>
+            </div>
+            <div style={{ fontSize: "17px", fontWeight: "700", color: "#f0f6ff" }}>House Details</div>
+            <div style={{ fontSize: "11px", color: "#3a5a7a", marginTop: "2px" }}>{locationLabel} · 1 mile radius · Street crime</div>
+            <a href={policeUrl} target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-block", marginTop: "8px", fontSize: "9px", color: "#1d4ed8", letterSpacing: "1px", textDecoration: "none", border: "1px solid #1d4ed8", padding: "3px 8px", borderRadius: "3px" }}>
+              VIEW ON POLICE.UK ↗
+            </a>
+          </div>
+
+          <div style={{ padding: "16px 24px", maxWidth: "800px", margin: "0 auto" }}>
+            <div style={{ background: "#0d1828", border: "1px solid #1e3a5f", borderRadius: "6px", padding: "10px 12px", marginBottom: "14px", fontSize: "10px", color: "#4a6a8a", lineHeight: 1.5 }}>
+              ℹ Search any UK location by street, town and postcode. Data is fetched live from <a href="https://data.police.uk" target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6" }}>data.police.uk</a> within a 1 mile radius.
+            </div>
+
+            <div style={{ background: "#0a1020", border: "1px solid #1a3050", borderRadius: "6px", padding: "12px", marginBottom: "14px" }}>
+              <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase", marginBottom: "8px" }}>Location</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                <div>
+                  <div style={{ fontSize: "9px", letterSpacing: "1px", color: "#2a4a6a", marginBottom: "5px" }}>Street</div>
+                  <input value={street} onChange={e => setStreet(e.target.value)} placeholder="e.g. Carr Road" style={inp} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "9px", letterSpacing: "1px", color: "#2a4a6a", marginBottom: "5px" }}>Town / City</div>
+                  <input value={town} onChange={e => setTown(e.target.value)} placeholder="e.g. Calverley, Leeds" style={inp} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "9px", letterSpacing: "1px", color: "#2a4a6a", marginBottom: "5px" }}>Postcode</div>
+                <input value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="e.g. LS28 5QR" style={{ ...inp, maxWidth: "200px" }} />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "10px", marginBottom: "14px", alignItems: "end" }}>
+              <div>
+                <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase", marginBottom: "5px" }}>From</div>
+                <select value={fromM} onChange={e => setFromM(e.target.value)} style={sel}>
+                  {MONTHS.map(m => <option key={m} value={m}>{fmtMonth(m)}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase", marginBottom: "5px" }}>To</div>
+                <select value={toM} onChange={e => setToM(e.target.value)} style={sel}>
+                  {MONTHS.map(m => <option key={m} value={m}>{fmtMonth(m)}</option>)}
+                </select>
+              </div>
+              <button onClick={load} disabled={loading} style={{
+                background: loading ? "#0a1a2a" : "#1a4ed8", border: "none",
+                color: loading ? "#2a4a6a" : "#fff", padding: "7px 20px", borderRadius: "5px",
+                fontSize: "11px", letterSpacing: "1px", cursor: loading ? "not-allowed" : "pointer",
+                fontFamily: "inherit", textTransform: "uppercase", whiteSpace: "nowrap", alignSelf: "end"
+              }}>{loading ? "Loading…" : "Fetch"}</button>
+            </div>
+
+            {loading && (
+              <div style={{ marginBottom: "14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#2a4a6a", marginBottom: "5px" }}>
+                  <span>{progress.status || "Working…"}</span>
+                  <span>{progress.done}/{progress.total}</span>
+                </div>
+                <div style={{ height: "3px", background: "#0a1020", borderRadius: "2px" }}>
+                  <div style={{ height: "100%", borderRadius: "2px", background: "#1a4ed8", width: progress.total ? `${(progress.done / progress.total) * 100}%` : "5%", transition: "width 0.3s" }} />
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div style={{ background: "#140608", border: "1px solid #5a1a20", borderRadius: "6px", padding: "12px", color: "#f87171", fontSize: "11px", marginBottom: "14px" }}>⚠ {error}</div>
+            )}
+
+            {!loading && !fetched && !error && (
+              <div style={{ border: "1px dashed #0f1e30", borderRadius: "8px", padding: "48px 20px", textAlign: "center", color: "#1a3050", fontSize: "10px", letterSpacing: "2px" }}>
+                ENTER A LOCATION, SELECT DATE RANGE AND CLICK FETCH
+              </div>
+            )}
+
+            {!loading && fetched && crimes.length === 0 && (
+              <div style={{ textAlign: "center", padding: "40px", color: "#2a4a6a", fontSize: "11px" }}>
+                No records found. Try the <a href={policeUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6" }}>official police.uk site</a> for this area.
+              </div>
+            )}
+
+            {!loading && fetched && crimes.length > 0 && (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "8px", marginBottom: "12px" }}>
+                  {[
+                    { label: "Total", val: shown.length, col: "#3b82f6" },
+                    { label: "Months", val: Object.keys(moCounts).length, col: "#06b6d4" },
+                    { label: "Types", val: Object.keys(catCounts).length, col: "#f59e0b" },
+                    { label: "Most Common", val: topCats[0] ? fmtCat(topCats[0][0]) : "—", col: "#a78bfa", sm: true },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: "#0a1020", border: "1px solid #1a3050", borderRadius: "6px", padding: "11px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: s.sm ? "10px" : "20px", fontWeight: "700", color: s.col, lineHeight: 1.2 }}>{s.val}</div>
+                      <div style={{ fontSize: "8px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase", marginTop: "3px" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {moTrend.length > 1 && (
+                  <div style={{ background: "#0a1020", border: "1px solid #1a3050", borderRadius: "6px", padding: "12px", marginBottom: "12px" }}>
+                    <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase", marginBottom: "8px" }}>Monthly Trend</div>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height: "55px" }}>
+                      {moTrend.map(([m, cnt]) => (
+                        <div key={m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                          <div style={{ fontSize: "8px", color: "#1a4060", fontWeight: "600" }}>{cnt}</div>
+                          <div style={{ width: "100%", background: "#1a4ed8", opacity: 0.6 + 0.4 * (cnt / maxMo), height: `${Math.max(3, (cnt / maxMo) * 34)}px`, borderRadius: "2px 2px 0 0" }} title={`${fmtMonth(m)}: ${cnt}`} />
+                          <div style={{ fontSize: "7px", color: "#1a3050", transform: "rotate(-45deg)", whiteSpace: "nowrap", marginTop: "2px" }}>{m.slice(2)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ background: "#0a1020", border: "1px solid #1a3050", borderRadius: "6px", padding: "12px", marginBottom: "12px" }}>
+                  <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase", marginBottom: "8px" }}>By Category</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    {topCats.map(([cat, cnt]) => (
+                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color(cat), flexShrink: 0 }} />
+                        <div style={{ fontSize: "10px", color: "#5a7a9a", width: "155px", flexShrink: 0 }}>{fmtCat(cat)}</div>
+                        <div style={{ flex: 1, height: "4px", background: "#0d1828", borderRadius: "2px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${(cnt / shown.length) * 100}%`, background: color(cat), borderRadius: "2px" }} />
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#c0d4e8", width: "22px", textAlign: "right", flexShrink: 0 }}>{cnt}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#2a4a6a", textTransform: "uppercase" }}>{sorted.length} Records</div>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ ...sel, width: "auto", fontSize: "10px", padding: "4px 7px" }}>
+                      <option value="all">All Types</option>
+                      {cats.map(c => <option key={c} value={c}>{fmtCat(c)}</option>)}
+                    </select>
+                    <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...sel, width: "auto", fontSize: "10px", padding: "4px 7px" }}>
+                      <option value="month">Date ↓</option>
+                      <option value="category">Category</option>
+                      <option value="location">Location</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                  {sorted.map((c, i) => (
+                    <div key={c.id || i} onClick={() => setExpanded(expanded === i ? null : i)}
+                      style={{ background: expanded === i ? "#0d1828" : "#080e18", border: `1px solid ${expanded === i ? "#1e3a5a" : "#0f1a28"}`, borderRadius: "4px", padding: "8px 10px", cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                        <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: color(c.category), flexShrink: 0 }} />
+                        <div style={{ flex: 1, fontSize: "11px", color: "#a0b8cc" }}>{fmtCat(c.category)}</div>
+                        <div style={{ fontSize: "10px", color: "#1e3a5a" }}>{fmtMonth(c.month)}</div>
+                        <div style={{ fontSize: "9px", color: "#142030" }}>{expanded === i ? "▲" : "▼"}</div>
+                      </div>
+                      {expanded === i && (
+                        <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #0f1e30", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px", fontSize: "10px" }}>
+                          <div><span style={{ color: "#2a4a6a" }}>Location: </span><span style={{ color: "#5a7a9a" }}>{c.street || "Unknown location"}</span></div>
+                          <div><span style={{ color: "#2a4a6a" }}>Month: </span><span style={{ color: "#5a7a9a" }}>{fmtMonth(c.month)}</span></div>
+                          <div style={{ gridColumn: "span 2" }}><span style={{ color: "#2a4a6a" }}>Outcome: </span><span style={{ color: "#5a7a9a" }}>{c.outcome || "Under investigation"}</span></div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: "14px", fontSize: "8px", color: "#0f1e30", letterSpacing: "1px", textAlign: "center" }}>{STATIC_DATA_NOTE}</div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

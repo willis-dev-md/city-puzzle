@@ -13,6 +13,10 @@ function getDailyImageUrl() {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/housedetails', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'housedetails', 'index.html'));
+});
+
 app.get('/api/config', (req, res) => {
   res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
   const source = (req.query.source || 'city').toString().toLowerCase();
